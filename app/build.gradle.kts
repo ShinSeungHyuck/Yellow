@@ -1,20 +1,25 @@
 plugins {
-    alias(libs.plugins.android.application)
-    alias(libs.plugins.kotlin.android)
+    id("com.android.application")
+    id("org.jetbrains.kotlin.android")
 }
-
+repositories {
+    google()
+    mavenCentral()
+    maven("https://jitpack.io") // <- JitPack 추가
+    flatDir {
+        dirs("libs") // libs 폴더 참조
+    }
+}
 android {
-    namespace = "com.example.yellow"
-    compileSdk = 36
+    namespace = "com.example.myproject"
+    compileSdk = 34
 
     defaultConfig {
-        applicationId = "com.example.yellow"
+        applicationId = "com.example.myproject"
         minSdk = 24
-        targetSdk = 36
+        targetSdk = 34
         versionCode = 1
         versionName = "1.0"
-
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     buildTypes {
@@ -26,36 +31,30 @@ android {
             )
         }
     }
+
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
+
     kotlinOptions {
-        jvmTarget = "11"
-    }
-    buildFeatures {
-        viewBinding = true
+        jvmTarget = "17"
     }
 }
 
+
 dependencies {
+    implementation("androidx.core:core-ktx:1.12.0")
+    implementation("androidx.appcompat:appcompat:1.7.0")
+    implementation("com.google.android.material:material:1.11.0")
 
-    implementation(libs.androidx.core.ktx)
-    implementation(libs.androidx.appcompat)
-    implementation(libs.material)
-    implementation(libs.androidx.constraintlayout)
-    implementation(libs.androidx.lifecycle.livedata.ktx)
-    implementation(libs.androidx.lifecycle.viewmodel.ktx)
-    implementation(libs.androidx.navigation.fragment.ktx)
-    implementation(libs.androidx.navigation.ui.ktx)
-    testImplementation(libs.junit)
-    androidTestImplementation(libs.androidx.junit)
-    androidTestImplementation(libs.androidx.espresso.core)
-    implementation 'com.github.JorenSix:TarsosDSP:v2.4' // JitPack을 통해 TarsosDSP 추가 (버전 확인 필요)
-
-    // UI 관련 기본 라이브러리
-    implementation 'androidx.core:core-ktx:1.17.0' // 이미 있을 수 있음
-    implementation 'androidx.appcompat:appcompat:1.7.1' // 이미 있을 수 있음
-    implementation 'com.google.android.material:material:1.13.0' // 이미 있을 수 있음
-    implementation 'androidx.constraintlayout:constraintlayout:2.2.1' // 이미 있을 수 있음
+    // Navigation Component
+    implementation("androidx.navigation:navigation-fragment-ktx:2.7.2")
+    implementation("androidx.navigation:navigation-ui-ktx:2.7.2")
+    //implementation("com.github.JorenSix:TarsosDSP:2.5")
+    //implementation("com.github.JorenSix:TarsosDSP:master-SNAPSHOT")
+    //implementation("be.tarsos.dsp:core:2.5")
+    //implementation("be.tarsos.dsp:jvm:2.5")
+    implementation(files("libs/TarsosDSPKit-release.aar"))
+    implementation("androidx.constraintlayout:constraintlayout:2.2.0")
 }
