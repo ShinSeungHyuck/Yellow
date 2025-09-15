@@ -33,3 +33,4 @@ class MainActivity : AppCompatActivity() {
         navView.setupWithNavController(navController)
     }
 }
+//뭔소리야 다르잖아
