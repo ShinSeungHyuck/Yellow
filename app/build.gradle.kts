@@ -11,15 +11,20 @@ repositories {
     }
 }
 android {
-    namespace = "com.example.myproject"
+    namespace = "com.example.yellow"
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "com.example.myproject"
+        applicationId = "com.example.yellow"
         minSdk = 24
         targetSdk = 34
         versionCode = 1
         versionName = "1.0"
+    }
+
+    buildFeatures {
+        viewBinding = true
+        // dataBinding = true   // <layout> 태그 사용했다면 이 줄도 켜야 합니다
     }
 
     buildTypes {

@@ -9,6 +9,7 @@ import be.tarsos.dsp.AudioDispatcher
 import be.tarsos.dsp.io.android.AudioDispatcherFactory
 import be.tarsos.dsp.pitch.PitchDetectionHandler
 import be.tarsos.dsp.pitch.PitchProcessor
+import com.example.yellow.R
 
 class HomeFragment : Fragment() {
 
