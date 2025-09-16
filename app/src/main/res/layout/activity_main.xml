@@ -3,18 +3,40 @@
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:padding="16dp">
 
-    <androidx.fragment.app.FragmentContainerView
-        android:id="@+id/nav_host_fragment"
-        android:name="androidx.navigation.fragment.NavHostFragment"
-        android:layout_width="0dp"
-        android:layout_height="0dp"
+    <!-- 시작/중지 버튼 -->
+    <Button
+        android:id="@+id/buttonStartStop"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="시작"
         app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent" />
+
+    <!-- 음고 표시 TextView -->
+    <TextView
+        android:id="@+id/textViewPitch"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:text="음고: -"
+        android:textSize="18sp"
+        app:layout_constraintTop_toBottomOf="@id/buttonStartStop"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:navGraph="@navigation/mobile_navigation"
-        app:defaultNavHost="true" />
+        android:layout_marginTop="16dp" />
+
+    <!-- 음이름 표시 TextView -->
+    <TextView
+        android:id="@+id/textViewNote"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:text="음이름: -"
+        android:textSize="18sp"
+        app:layout_constraintTop_toBottomOf="@id/textViewPitch"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginTop="8dp" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
