@@ -62,5 +62,5 @@ dependencies {
     //implementation("be.tarsos.dsp:jvm:2.5")
     implementation(files("libs/TarsosDSPKit-release.aar"))
     implementation("androidx.constraintlayout:constraintlayout:2.2.0")
-    implementation("com.github.MidiEvent:MidiEvent:1.0")
+    implementation("com.leff.midi:leff-midi:1.2.0")
 }
