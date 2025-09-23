@@ -2,14 +2,15 @@ plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
 }
-repositories {
+/*repositories {
     google()
     mavenCentral()
     maven("https://jitpack.io") // <- JitPack 추가
     flatDir {
         dirs("libs") // libs 폴더 참조
     }
-}
+}*/
+
 android {
     namespace = "com.example.yellow"
     compileSdk = 34
@@ -63,4 +64,7 @@ dependencies {
     implementation(files("libs/TarsosDSPKit-release.aar"))
     implementation("androidx.constraintlayout:constraintlayout:2.2.0")
     implementation("com.github.leff-software:midi-android:1.0.0")
+    implementation("com.github.billthefarmer:MidiDriver:1.21")
+
+
 }
