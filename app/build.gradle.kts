@@ -2,7 +2,14 @@ plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
 }
-
+repositories {
+    google()
+    mavenCentral()
+    maven { url = uri("https://jitpack.io") }
+    flatDir {
+        dirs("libs")
+    }
+}
 android {
     namespace = "com.example.yellow"
     compileSdk = 34
@@ -17,7 +24,6 @@ android {
 
     buildFeatures {
         viewBinding = true
-        // dataBinding = true   // <layout> 태그 사용했다면 이 줄도 켜야 합니다
     }
 
     buildTypes {
@@ -48,10 +54,6 @@ dependencies {
     // Navigation Component
     implementation("androidx.navigation:navigation-fragment-ktx:2.7.2")
     implementation("androidx.navigation:navigation-ui-ktx:2.7.2")
-    //implementation("com.github.JorenSix:TarsosDSP:2.5")
-    //implementation("com.github.JorenSix:TarsosDSP:master-SNAPSHOT")
-    //implementation("be.tarsos.dsp:core:2.5")
-    //implementation("be.tarsos.dsp:jvm:2.5")
     implementation(files("libs/TarsosDSPKit-release.aar"))
     implementation("androidx.constraintlayout:constraintlayout:2.2.0")
     implementation("com.leff.midi:leff-midi:1.2.0")
