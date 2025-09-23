@@ -2,14 +2,7 @@ plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
 }
-repositories {
-    google()
-    mavenCentral()
-    maven("https://jitpack.io") // <- JitPack 추가
-    flatDir {
-        dirs("libs") // libs 폴더 참조
-    }
-}
+
 android {
     namespace = "com.example.yellow"
     compileSdk = 34
@@ -46,7 +39,6 @@ android {
         jvmTarget = "17"
     }
 }
-
 
 dependencies {
     implementation("androidx.core:core-ktx:1.12.0")
