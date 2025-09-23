@@ -3,6 +3,12 @@ plugins {
     id("org.jetbrains.kotlin.android")
 }
 
+repositories {
+    flatDir {
+        dirs("libs")
+    }
+}
+
 android {
     namespace = "com.example.yellow"
     compileSdk = 34
@@ -49,5 +55,5 @@ dependencies {
     implementation("androidx.navigation:navigation-ui-ktx:2.7.2")
     implementation(files("libs/TarsosDSPKit-release.aar"))
     implementation("androidx.constraintlayout:constraintlayout:2.2.0")
-    implementation("com.leff.midi:leff-midi:1.2.2")
+    implementation("com.github.kshoji:javax-sound-midi:2.0.3")
 }
