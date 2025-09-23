@@ -3,12 +3,6 @@ plugins {
     id("org.jetbrains.kotlin.android")
 }
 
-repositories {
-    flatDir {
-        dirs("libs")
-    }
-}
-
 android {
     namespace = "com.example.yellow"
     compileSdk = 34
