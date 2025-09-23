@@ -3,6 +3,14 @@ plugins {
     id("org.jetbrains.kotlin.android")
 }
 
+configurations.all {
+    resolutionStrategy {
+        dependencySubstitution {
+            substitute(module("org.bouncycastle:bcprov-jdk18on")).using(module("org.bouncycastle:bcprov-jdk15to18:1.77"))
+        }
+    }
+}
+
 android {
     namespace = "com.example.yellow"
     compileSdk = 34
