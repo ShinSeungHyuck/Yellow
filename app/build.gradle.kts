@@ -2,13 +2,7 @@ plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
 }
-repositories {
-    google()
-    mavenCentral()
-    flatDir {
-        dirs("libs")
-    }
-}
+
 android {
     namespace = "com.example.yellow"
     compileSdk = 34
