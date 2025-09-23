@@ -22,6 +22,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var buttonStartStop: Button
     private lateinit var textViewPitch: TextView
     private lateinit var textViewNote: TextView
+    private lateinit var pitchView: PitchView
 
     private var dispatcher: AudioDispatcher? = null
     private var audioThread: Thread? = null
@@ -37,6 +38,7 @@ class MainActivity : AppCompatActivity() {
         buttonStartStop = findViewById(R.id.buttonStartStop)
         textViewPitch = findViewById(R.id.textViewPitch)
         textViewNote = findViewById(R.id.textViewNote)
+        pitchView = findViewById(R.id.pitchView)
 
         buttonStartStop.setOnClickListener {
             if (isRecording) stopRecording()
@@ -105,6 +107,7 @@ class MainActivity : AppCompatActivity() {
         if (pitch != -1f) {
             textViewPitch.text = String.format("음고: %.2f Hz", pitch)
             textViewNote.text = String.format("음이름: %s", pitchToNote(pitch))
+            pitchView.setVoicePitch(pitch)
         }
     }
 
