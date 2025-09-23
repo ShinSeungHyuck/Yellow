@@ -13,6 +13,7 @@ class FirstFragment : Fragment() {
     private val binding get() = _binding!!
 
     private lateinit var voicePitchDetector: VoicePitchDetector
+    private lateinit var midiParser: MidiParser
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -27,11 +28,18 @@ class FirstFragment : Fragment() {
 
         voicePitchDetector = VoicePitchDetector { pitch ->
             activity?.runOnUiThread {
-                binding.pitchView.setVoicePitch(pitch)
+                binding.pitchView.addUserPitch(pitch)
             }
         }
 
+        midiParser = MidiParser()
+
         binding.startButton.setOnClickListener {
+            // In a real application, you would load a MIDI file from storage.
+            // For this example, we are using a placeholder MIDI file.
+            val inputStream = context?.assets?.open("placeholder.mid")
+            val notes = midiParser.parse(inputStream!!)
+            binding.pitchView.setNotes(notes)
             voicePitchDetector.start()
         }
 
