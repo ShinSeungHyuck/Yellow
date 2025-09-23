@@ -37,9 +37,9 @@ class PitchView(context: Context, attrs: AttributeSet) : View(context, attrs) {
 
         // Draw musical notes
         for (note in notes) {
-            val left = note.start / 100f
-            val right = (note.start + note.duration) / 100f
-            val top = (127 - note.pitch) * height / 127f
+            val left = note.startTime / 100f
+            val right = (note.startTime + note.duration) / 100f
+            val top = (127 - note.note) * height / 127f
             val bottom = top + 10f
             canvas.drawRect(left, top, right, bottom, notePaint)
         }
