@@ -49,5 +49,4 @@ dependencies {
     implementation("androidx.navigation:navigation-ui-ktx:2.7.2")
     implementation(files("libs/TarsosDSPKit-release.aar"))
     implementation("androidx.constraintlayout:constraintlayout:2.2.0")
-    implementation("com.github.kshoji:javax-sound-midi:2.0.3")
 }
