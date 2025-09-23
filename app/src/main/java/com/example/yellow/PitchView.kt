@@ -32,6 +32,12 @@ class PitchView(context: Context, attrs: AttributeSet) : View(context, attrs) {
         invalidate()
     }
 
+    fun clear() {
+        notes = emptyList()
+        userPitches = emptyList()
+        invalidate()
+    }
+
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
 

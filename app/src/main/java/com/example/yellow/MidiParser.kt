@@ -1,18 +1,29 @@
 package com.example.yellow
 
 import android.content.Context
+import com.leff.midi.MidiFile
+import com.leff.midi.event.NoteOn
 import java.io.InputStream
 
 class MidiParser {
 
     fun parse(inputStream: InputStream): List<MusicalNote> {
-        // This is a placeholder implementation. In a real application, you would use a MIDI parsing library to parse the MIDI file.
-        return listOf(
-            MusicalNote(60, 0, 500),
-            MusicalNote(62, 500, 500),
-            MusicalNote(64, 1000, 500),
-            MusicalNote(65, 1500, 500),
-            MusicalNote(67, 2000, 500)
-        )
+        val midiFile = MidiFile(inputStream)
+        val notes = mutableListOf<MusicalNote>()
+
+        for (track in midiFile.tracks) {
+            for (event in track.events) {
+                if (event is NoteOn && event.velocity > 0) {
+                    val note = MusicalNote(
+                        event.noteValue,
+                        event.tick,
+                        event.durationInTicks
+                    )
+                    notes.add(note)
+                }
+            }
+        }
+
+        return notes
     }
 }

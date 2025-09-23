@@ -45,6 +45,7 @@ class FirstFragment : Fragment() {
 
         binding.stopButton.setOnClickListener {
             voicePitchDetector.stop()
+            binding.pitchView.clear()
         }
     }
 
