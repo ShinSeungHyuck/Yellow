@@ -14,12 +14,11 @@ dependencyResolutionManagement {
         maven { url = uri("https://jitpack.io") }
     }
     
-    allConfigurations {
-        resolutionStrategy {
-            dependencySubstitution {
-                substitute(module("org.bouncycastle:bcprov-jdk18on")).using(module("org.bouncycastle:bcprov-jdk15to18:1.77"))
-                substitute(module("org.bouncycastle:bcutil-jdk18on")).using(module("org.bouncycastle:bcutil-jdk15to18:1.77"))
-                substitute(module("org.bouncycastle:bcpkix-jdk18on")).using(module("org.bouncycastle:bcpkix-jdk15to18:1.77"))
+    components {
+        eachComponent {
+            if (details.id.group == "org.bouncycastle" && details.id.name.endsWith("-jdk18on")) {
+                val newName = details.id.name.replace("-jdk18on", "-jdk15to18")
+                details.useTarget(group = details.id.group, name = newName, version = "1.77")
             }
         }
     }
