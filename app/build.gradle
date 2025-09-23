@@ -4,6 +4,7 @@ plugins {
 }
 
 android {
+    namespace "com.example.yellow"
     compileSdkVersion 34
     defaultConfig {
         applicationId "com.example.yellow"
