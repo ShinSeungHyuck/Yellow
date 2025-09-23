@@ -14,10 +14,13 @@ dependencyResolutionManagement {
         maven { url = uri("https://jitpack.io") }
     }
     
-    components.all { details ->
+    components.all { details: org.gradle.api.artifacts.ComponentMetadataDetails ->
         if (details.id.group == "org.bouncycastle" && details.id.name.endsWith("-jdk18on")) {
-            val newName = details.id.name.replace("-jdk18on", "-jdk15to18")
-            details.useTarget(group = details.id.group, name = newName, version = "1.77")
+            details.useTarget(
+                group = details.id.group,
+                name = details.id.name.replace("-jdk18on", "-jdk15to18"),
+                version = "1.77"
+            )
             details.because("The jdk18on variant of Bouncy Castle is not compatible with the project's Java 17 environment.")
         }
     }
