@@ -3,6 +3,26 @@ plugins {
     id("org.jetbrains.kotlin.android")
 }
 
+// Java 17 호환성을 위한 Bouncy Castle 라이브러리 버전 강제 지정
+configurations.all {
+    resolutionStrategy {
+        dependencySubstitution {
+            substitute(module("org.bouncycastle:bcprov-jdk18on")).using(module("org.bouncycastle:bcprov-jdk15to18:1.77"))
+            substitute(module("org.bouncycastle:bcutil-jdk18on")).using(module("org.bouncycastle:bcutil-jdk15to18:1.77"))
+            substitute(module("org.bouncycastle:bcpkix-jdk18on")).using(module("org.bouncycastle:bcpkix-jdk15to18:1.77"))
+        }
+    }
+}
+
+repositories {
+    google()
+    mavenCentral()
+    maven("https://jitpack.io")
+    flatDir {
+        dirs("libs")
+    }
+}
+
 android {
     namespace = "com.example.yellow"
     compileSdk = 34
