@@ -14,11 +14,11 @@ dependencyResolutionManagement {
         maven { url = uri("https://jitpack.io") }
     }
     
-    components.all {
-        if (id.group == "org.bouncycastle" && id.name.endsWith("-jdk18on")) {
-            val newName = id.name.replace("-jdk18on", "-jdk15to18")
-            useTarget(group = id.group, name = newName, version = "1.77")
-            because("The jdk18on variant of Bouncy Castle is not compatible with the project's Java 17 environment.")
+    components.all { details ->
+        if (details.id.group == "org.bouncycastle" && details.id.name.endsWith("-jdk18on")) {
+            val newName = details.id.name.replace("-jdk18on", "-jdk15to18")
+            details.useTarget(group = details.id.group, name = newName, version = "1.77")
+            details.because("The jdk18on variant of Bouncy Castle is not compatible with the project's Java 17 environment.")
         }
     }
 }
