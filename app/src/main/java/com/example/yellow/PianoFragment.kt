@@ -1,6 +1,7 @@
 package com.example.yellow
 
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -25,12 +26,13 @@ class PianoFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // You should replace "placeholder.mid" with the actual name of your midi file in the assets
+        // IMPORTANT: Replace "your_midi_file.mid" with the actual name of your midi file in the assets folder.
         loadMidiFile("your_midi_file.mid")
     }
 
     private fun loadMidiFile(fileName: String) {
         try {
+            Log.d("PianoFragment", "Attempting to load MIDI file: $fileName")
             // 1. Open the MIDI file from the assets folder
             val inputStream = requireContext().assets.open(fileName)
 
@@ -38,12 +40,19 @@ class PianoFragment : Fragment() {
             val midiParser = MidiParser()
             val notes = midiParser.parse(inputStream)
 
+            if (notes.isEmpty()) {
+                Log.w("PianoFragment", "MIDI parsing resulted in 0 notes. Check the MIDI file or parser logic.")
+            } else {
+                Log.d("PianoFragment", "Successfully parsed ${notes.size} notes.")
+            }
+
             // 3. Set the parsed notes to our PianoRollView
             binding.pianoRollView.setNotes(notes)
 
         } catch (e: IOException) {
-            // Handle file not found or other IO errors
-            e.printStackTrace()
+            Log.e("PianoFragment", "Failed to load MIDI file '$fileName' from assets. Make sure the file exists.", e)
+            // Even if the file fails to load, set empty notes to draw the grid
+            binding.pianoRollView.setNotes(emptyList())
         }
     }
 
