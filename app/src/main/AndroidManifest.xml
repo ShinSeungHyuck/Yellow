@@ -2,6 +2,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <!-- Request permission to record audio -->
+    <!-- Request permission to record audio -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
 
     <application
