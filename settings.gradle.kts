@@ -14,7 +14,7 @@ dependencyResolutionManagement {
         maven { url = uri("https://jitpack.io") }
     }
     
-    components.all { details: org.gradle.api.artifacts.ComponentMetadataDetails ->
+    components.all { details ->
         if (details.id.group == "org.bouncycastle" && details.id.name.endsWith("-jdk18on")) {
             details.useTarget(
                 group = details.id.group,
