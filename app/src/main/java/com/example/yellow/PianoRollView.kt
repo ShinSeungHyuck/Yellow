@@ -6,6 +6,7 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Rect
 import android.util.AttributeSet
+import android.util.Log
 import android.view.View
 import kotlin.math.log2
 
@@ -56,6 +57,7 @@ class PianoRollView(context: Context, attrs: AttributeSet?) : View(context, attr
             minPitch = (newNotes.minOf { it.note } - 4).coerceAtLeast(0)
             maxPitch = (newNotes.maxOf { it.note } + 4).coerceAtMost(127)
             totalDurationMs = newNotes.maxOfOrNull { it.startTime + it.duration } ?: 10000L
+            Log.d("PianoRollView", "Notes set. Count: ${notes.size}, Duration: ${totalDurationMs}ms, Pitch Range: $minPitch-$maxPitch")
         }
         livePitches.clear()
         recordingStartTime = -1L
@@ -83,6 +85,7 @@ class PianoRollView(context: Context, attrs: AttributeSet?) : View(context, attr
         val pitchRange = maxPitch - minPitch + 1
         val desiredHeight = (pitchRange * keyHeight).toInt() + timeAxisHeight.toInt()
         val desiredWidth = (totalDurationMs / 1000f * pixelsPerSecond).toInt() + pitchLabelWidth.toInt()
+        Log.d("PianoRollView", "onMeasure. Desired width: $desiredWidth, Desired height: $desiredHeight")
         setMeasuredDimension(desiredWidth, desiredHeight)
     }
 
