@@ -34,7 +34,7 @@ class PianoRollView(context: Context, attrs: AttributeSet?) : View(context, attr
     private val pitchLabelWidth = 120f
     private val timeAxisHeight = 60f
     private val keyHeight = 40f
-    private val pixelsPerSecond = 150f
+    private val pixelsPerSecond = 10f
 
     private val livePitches = mutableListOf<Pair<Long, Float>>()
     private var recordingStartTime = -1L
