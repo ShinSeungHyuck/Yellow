@@ -26,8 +26,8 @@ class PianoFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // IMPORTANT: Replace "your_midi_file.mid" with the actual name of your midi file in the assets folder.
-        loadMidiFile("your_midi_file.mid")
+        // IMPORTANT: Replace "placeholder.mid" with the actual name of your midi file in the assets folder.
+        loadMidiFile("placeholder.mid")
     }
 
     private fun loadMidiFile(fileName: String) {

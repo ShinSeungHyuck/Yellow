@@ -11,9 +11,11 @@ class MidiParser {
         try {
             // Use a BufferedInputStream for mark/reset support
             val bis = if (inputStream.markSupported()) inputStream else BufferedInputStream(inputStream)
+            Log.d("MidiParser", "Parsing MIDI stream...")
 
             // 1. Read Header Chunk
             val headerId = String(readBytes(bis, 4))
+            Log.d("MidiParser", "Header ID: $headerId")
             if (headerId != "MThd") {
                 Log.e("MidiParser", "Invalid MIDI file: Header ID is not MThd.")
                 return emptyList()
@@ -22,12 +24,15 @@ class MidiParser {
             val format = readShort(bis)
             val trackCount = readShort(bis)
             val division = readShort(bis) // Ticks per quarter note
+            Log.d("MidiParser", "Header - Format: $format, Tracks: $trackCount, Division: $division")
+
 
             // 2. Read all tracks
             val allNotes = mutableListOf<MusicalNote>()
             for (i in 0 until trackCount) {
                 allNotes.addAll(parseTrack(bis, division))
             }
+            Log.d("MidiParser", "Total notes parsed: ${allNotes.size}")
             return allNotes
         } catch (e: Exception) {
             Log.e("MidiParser", "Failed to parse MIDI file", e)
