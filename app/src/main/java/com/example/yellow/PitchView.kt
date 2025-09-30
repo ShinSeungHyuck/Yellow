@@ -9,20 +9,18 @@ import android.view.View
 
 class PitchView(context: Context, attrs: AttributeSet?) : View(context, attrs) {
 
-    private val textPaint = Paint()
-    private val gridPaint = Paint()
     private var minPitch = 48
     private var maxPitch = 72
-    private val keyHeight = 40f
-    private val pitchLabelWidth = 120f
-    private val pitchNames = arrayOf("C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B")
+    private val textPaint = Paint()
+    private val gridPaint = Paint()
 
+    private val pitchNames = arrayOf("C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B")
+    private val timeAxisHeight = 60f // PianoRollView와 동일한 값
 
     init {
-        textPaint.color = Color.DKGRAY
+        textPaint.color = Color.BLACK
         textPaint.textSize = 28f
-        textPaint.isAntiAlias = true
-        textPaint.textAlign = Paint.Align.RIGHT
+        textPaint.textAlign = Paint.Align.CENTER
         gridPaint.color = Color.LTGRAY
         gridPaint.strokeWidth = 1f
     }
@@ -30,34 +28,35 @@ class PitchView(context: Context, attrs: AttributeSet?) : View(context, attrs) {
     fun setPitchRange(minPitch: Int, maxPitch: Int) {
         this.minPitch = minPitch
         this.maxPitch = maxPitch
-        requestLayout()
-        invalidate()
+        requestLayout() // 범위가 변경되었으므로 레이아웃을 다시 계산합니다.
+        invalidate() // 다시 그립니다.
     }
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
-        val desiredWidth = pitchLabelWidth.toInt()
-        val pitchRange = maxPitch - minPitch + 1
-        val desiredHeight = (pitchRange * keyHeight).toInt()
-        setMeasuredDimension(desiredWidth, desiredHeight)
+        val desiredWidth = (paddingLeft + paddingRight + textPaint.measureText("C#8")).toInt()
+        val measuredHeight = getDefaultSize(suggestedMinimumHeight, heightMeasureSpec)
+        setMeasuredDimension(desiredWidth, measuredHeight)
     }
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
-        val pitchRange = maxPitch - minPitch
-        val viewHeight = height
+        val availableHeight = height - timeAxisHeight
+        val pitchRange = (maxPitch - minPitch).coerceAtLeast(1)
+        val keyHeight = availableHeight / (pitchRange + 1)
 
-        for (i in 0..pitchRange) {
-            val y = viewHeight - (i * keyHeight) - (keyHeight/2)
-            val currentPitch = minPitch + i
+        for (pitch in minPitch..maxPitch) {
+            val octave = pitch / 12 - 1
+            val name = pitchNames[pitch % 12]
+            val pitchLabel = "$name$octave"
 
-            if (currentPitch < 0 || currentPitch > 127) continue
+            // 키의 중앙에 텍스트를 그립니다.
+            val y = availableHeight - ((pitch - minPitch) * keyHeight) - (keyHeight / 2) + (textPaint.descent() - textPaint.ascent()) / 4
 
-            // Draw horizontal line
-            canvas.drawLine(0f, y + (keyHeight/2), width.toFloat(), y + (keyHeight/2), gridPaint)
+            // 가로선을 그립니다.
+            val lineY = availableHeight - ((pitch - minPitch) * keyHeight)
+            canvas.drawLine(0f, lineY, width.toFloat(), lineY, gridPaint)
 
-            val octave = (currentPitch / 12) - 1
-            val noteName = pitchNames[currentPitch % 12]
-            canvas.drawText("$noteName$octave", pitchLabelWidth - 15, y + textPaint.textSize / 3, textPaint)
+            canvas.drawText(pitchLabel, (width / 2).toFloat(), y, textPaint)
         }
     }
 }

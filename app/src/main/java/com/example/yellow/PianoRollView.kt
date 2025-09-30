@@ -25,17 +25,19 @@ class PianoRollView(context: Context, attrs: AttributeSet?) : View(context, attr
         Color.parseColor("#900C3F"), Color.parseColor("#581845"), Color.parseColor("#A569BD")
     )
 
-    private var minPitch = 48
-    private var maxPitch = 72
+    var minPitch = 48
+        private set
+    var maxPitch = 72
+        private set
     private var totalDurationMs = 10000L
 
     private val timeAxisHeight = 60f
-    private val keyHeight = 40f
-    private val pixelsPerSecond = 10f
+    private var keyHeight = 40f // 이제 동적으로 계산됩니다.
+    private val pixelsPerSecond = 100f // 더 나은 시각화를 위해 초당 픽셀 수를 늘립니다.
 
     private val livePitches = mutableListOf<Pair<Long, Float>>()
     private var recordingStartTime = -1L
-    private val clipBounds = Rect() // To store visible rect
+    private val clipBounds = Rect()
 
     init {
         gridPaint.color = Color.LTGRAY
@@ -58,13 +60,28 @@ class PianoRollView(context: Context, attrs: AttributeSet?) : View(context, attr
         }
         livePitches.clear()
         recordingStartTime = -1L
-        requestLayout() // Recalculate dimensions
-        invalidate() // Redraw
+        updateKeyHeight() // 높이가 변경될 수 있으므로 키 높이를 다시 계산합니다.
+        requestLayout()
+        invalidate()
     }
 
-    // Public properties to share pitch range with PitchView
     val currentMinPitch: Int get() = minPitch
     val currentMaxPitch: Int get() = maxPitch
+
+    override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
+        super.onSizeChanged(w, h, oldw, oldh)
+        if (h > 0) {
+            updateKeyHeight() // 뷰의 크기가 정해지면 키 높이를 업데이트합니다.
+        }
+    }
+
+    private fun updateKeyHeight() {
+        if (height == 0) return // 아직 높이가 설정되지 않았으면 아무것도 하지 않습니다.
+        val availableHeight = height - timeAxisHeight
+        val pitchRange = (maxPitch - minPitch + 1).coerceAtLeast(1)
+        keyHeight = availableHeight / pitchRange
+        invalidate() // 키 높이가 변경되었으므로 다시 그립니다.
+    }
 
 
     fun addLivePitch(pitchInHz: Float) {
@@ -84,11 +101,9 @@ class PianoRollView(context: Context, attrs: AttributeSet?) : View(context, attr
     }
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
-        val pitchRange = maxPitch - minPitch + 1
-        val desiredHeight = (pitchRange * keyHeight).toInt() + timeAxisHeight.toInt()
         val desiredWidth = (totalDurationMs / 1000f * pixelsPerSecond).toInt()
-        Log.d("PianoRollView", "onMeasure. Desired width: $desiredWidth, Desired height: $desiredHeight")
-        setMeasuredDimension(desiredWidth, desiredHeight)
+        val measuredHeight = getDefaultSize(suggestedMinimumHeight, heightMeasureSpec)
+        setMeasuredDimension(desiredWidth, measuredHeight)
     }
 
     override fun onDraw(canvas: Canvas) {
@@ -103,23 +118,24 @@ class PianoRollView(context: Context, attrs: AttributeSet?) : View(context, attr
         val viewHeight = height - timeAxisHeight
         val pitchRange = maxPitch - minPitch
 
-        // --- Vertical Grid Lines (Time) ---
+        // --- 세로 격자선 (시간) ---
         val firstSecond = (clipBounds.left / pixelsPerSecond).toInt().coerceAtLeast(0)
-        val lastSecond = (clipBounds.right / pixelsPerSecond).toInt().coerceAtMost((totalDurationMs/1000).toInt())
+        val lastSecond = ((clipBounds.right / pixelsPerSecond) + 1).toInt().coerceAtMost((totalDurationMs/1000).toInt())
 
         textPaint.textAlign = Paint.Align.CENTER
         for (sec in firstSecond..lastSecond) {
-            if(sec % 5 == 0) { // Display label every 5 seconds
-                val x = sec * pixelsPerSecond
+            val x = sec * pixelsPerSecond
+            if (sec % 5 == 0) { // 5초마다 레이블 표시
                 canvas.drawLine(x, 0f, x, viewHeight, gridPaint)
                 canvas.drawText("${sec}s", x, viewHeight + 40f, textPaint)
+            } else { // 나머지 초는 작은 선만 긋습니다.
+                 canvas.drawLine(x, 0f, x, viewHeight, gridPaint)
             }
         }
 
-        // --- Horizontal Grid Lines (Pitch) ---
+        // --- 가로 격자선 (음높이) ---
         for (i in 0..pitchRange) {
             val y = viewHeight - (i * keyHeight)
-            // Draw horizontal line
             canvas.drawLine(0f, y, width.toFloat(), y, gridPaint)
         }
     }
@@ -134,7 +150,6 @@ class PianoRollView(context: Context, attrs: AttributeSet?) : View(context, attr
             val noteLeft = (note.startTime * pixelsPerMs)
             val noteRight = noteLeft + (note.duration * pixelsPerMs)
 
-            // Culling: If the note is not in the visible area, skip drawing it
             if (noteRight < clipBounds.left || noteLeft > clipBounds.right) {
                 continue
             }
@@ -161,7 +176,7 @@ class PianoRollView(context: Context, attrs: AttributeSet?) : View(context, attr
 
             val x2 = p2.first * pixelsPerMs
             val y2 = viewHeight - ((p2.second - minPitch) * keyHeight)
-            
+
             if (x2 < clipBounds.left || x1 > clipBounds.right) {
                 continue
             }
