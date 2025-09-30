@@ -37,7 +37,7 @@ class FirstFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        loadMidiFile("your_midi_file.mid")
+        loadMidiFile("placeholder.mid")
 
         binding.buttonStart.setOnClickListener {
             if (checkPermissions()) {

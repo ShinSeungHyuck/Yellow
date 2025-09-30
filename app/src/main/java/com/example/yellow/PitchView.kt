@@ -15,11 +15,11 @@ class PitchView(context: Context, attrs: AttributeSet?) : View(context, attrs) {
     private val gridPaint = Paint()
 
     private val pitchNames = arrayOf("C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B")
-    private val timeAxisHeight = 60f // PianoRollView와 동일한 값
+    private val timeAxisHeight = 40f // PianoRollView와 동일한 값
 
     init {
         textPaint.color = Color.BLACK
-        textPaint.textSize = 28f
+        textPaint.textSize = 20f
         textPaint.textAlign = Paint.Align.CENTER
         gridPaint.color = Color.LTGRAY
         gridPaint.strokeWidth = 1f

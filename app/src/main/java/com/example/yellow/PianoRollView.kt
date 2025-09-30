@@ -31,9 +31,9 @@ class PianoRollView(context: Context, attrs: AttributeSet?) : View(context, attr
         private set
     private var totalDurationMs = 10000L
 
-    private val timeAxisHeight = 60f
-    private var keyHeight = 40f // 이제 동적으로 계산됩니다.
-    private val pixelsPerSecond = 100f // 더 나은 시각화를 위해 초당 픽셀 수를 늘립니다.
+    private val timeAxisHeight = 80f
+    private var keyHeight = 10f // 이제 동적으로 계산됩니다.
+    private val pixelsPerSecond = 200f // 더 나은 시각화를 위해 초당 픽셀 수를 늘립니다.
 
     private val livePitches = mutableListOf<Pair<Long, Float>>()
     private var recordingStartTime = -1L
@@ -43,7 +43,7 @@ class PianoRollView(context: Context, attrs: AttributeSet?) : View(context, attr
         gridPaint.color = Color.LTGRAY
         gridPaint.strokeWidth = 1f
         textPaint.color = Color.DKGRAY
-        textPaint.textSize = 28f
+        textPaint.textSize = 30f
         textPaint.isAntiAlias = true
         livePitchPaint.color = Color.BLUE
         livePitchPaint.strokeWidth = 5f
