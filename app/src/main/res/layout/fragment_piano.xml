@@ -5,24 +5,32 @@
     android:layout_height="match_parent"
     tools:context=".PianoFragment">
 
-    <com.example.yellow.PitchView
-        android:id="@+id/pitch_view"
-        android:layout_width="wrap_content"
-        android:layout_height="match_parent"
-        android:layout_alignParentStart="true" />
+    <LinearLayout
+        android:id="@+id/piano_roll_container"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_alignParentTop="true"
+        android:layout_alignParentBottom="true"
+        android:orientation="horizontal"
+        android:layout_weight="0.66">
 
-    <HorizontalScrollView
-        android:id="@+id/piano_roll_scroll_view"
-        android:layout_width="0dp"
-        android:layout_height="match_parent"
-        android:layout_toEndOf="@id/pitch_view"
-        android:layout_alignParentEnd="true">
-
-        <com.example.yellow.PianoRollView
-            android:id="@+id/piano_roll_view"
+        <com.example.yellow.PitchView
+            android:id="@+id/pitch_view"
             android:layout_width="wrap_content"
             android:layout_height="match_parent" />
 
-    </HorizontalScrollView>
+        <HorizontalScrollView
+            android:id="@+id/piano_roll_scroll_view"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent">
+
+            <com.example.yellow.PianoRollView
+                android:id="@+id/piano_roll_view"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent" />
+
+        </HorizontalScrollView>
+
+    </LinearLayout>
 
 </RelativeLayout>
