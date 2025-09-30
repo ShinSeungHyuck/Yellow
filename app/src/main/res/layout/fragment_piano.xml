@@ -1,12 +1,20 @@
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:orientation="horizontal"
     tools:context=".PianoFragment">
 
+    <com.example.yellow.PitchView
+        android:id="@+id/pitch_view"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content" />
+
     <HorizontalScrollView
-        android:layout_width="match_parent"
-        android:layout_height="match_parent">
+        android:id="@+id/piano_roll_scroll_view"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="1">
 
         <com.example.yellow.PianoRollView
             android:id="@+id/piano_roll_view"
@@ -15,4 +23,4 @@
 
     </HorizontalScrollView>
 
-</FrameLayout>
+</LinearLayout>

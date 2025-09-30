@@ -49,10 +49,19 @@ class PianoFragment : Fragment() {
             // 3. Set the parsed notes to our PianoRollView
             binding.pianoRollView.setNotes(notes)
 
+            // 4. Update the PitchView with the new pitch range from the PianoRollView
+            binding.pitchView.setPitchRange(
+                binding.pianoRollView.currentMinPitch,
+                binding.pianoRollView.currentMaxPitch
+            )
+
+
         } catch (e: IOException) {
             Log.e("PianoFragment", "Failed to load MIDI file '$fileName' from assets. Make sure the file exists.", e)
             // Even if the file fails to load, set empty notes to draw the grid
             binding.pianoRollView.setNotes(emptyList())
+            // Also update the pitch view with default values
+            binding.pitchView.setPitchRange(48, 72)
         }
     }
 
