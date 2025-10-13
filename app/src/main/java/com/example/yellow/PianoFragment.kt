@@ -37,12 +37,15 @@ class PianoFragment : Fragment() {
 
         voicePitchDetector = VoicePitchDetector { pitch ->
             activity?.runOnUiThread {
-                binding.pitchView.setDetectedPitch(pitch)
+                if (pitch > 0) {
+                    binding.pianoRollView.addLivePitch(pitch)
+                }
             }
         }
 
         binding.startButton.setOnClickListener {
             if (checkPermissions()) {
+                binding.pianoRollView.clearLivePitches()
                 voicePitchDetector.start()
             } else {
                 requestPermissions()
@@ -52,6 +55,7 @@ class PianoFragment : Fragment() {
         binding.stopButton.setOnClickListener {
             voicePitchDetector.stop()
             binding.pitchView.clearDetectedPitch()
+            binding.pianoRollView.clearLivePitches()
         }
     }
 
