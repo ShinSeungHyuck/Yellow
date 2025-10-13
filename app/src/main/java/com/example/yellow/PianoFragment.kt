@@ -14,6 +14,8 @@ class PianoFragment : Fragment() {
     private var _binding: FragmentPianoBinding? = null
     private val binding get() = _binding!!
 
+    private lateinit var voicePitchDetector: VoicePitchDetector
+
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -26,17 +28,28 @@ class PianoFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // IMPORTANT: Replace "placeholder.mid" with the actual name of your midi file in the assets folder.
         loadMidiFile("placeholder.mid")
+
+        voicePitchDetector = VoicePitchDetector { pitch ->
+            activity?.runOnUiThread {
+                binding.pitchView.setDetectedPitch(pitch)
+            }
+        }
+
+        binding.startButton.setOnClickListener {
+            voicePitchDetector.start()
+        }
+
+        binding.stopButton.setOnClickListener {
+            voicePitchDetector.stop()
+            binding.pitchView.clearDetectedPitch()
+        }
     }
 
     private fun loadMidiFile(fileName: String) {
         try {
             Log.d("PianoFragment", "Attempting to load MIDI file: $fileName")
-            // 1. Open the MIDI file from the assets folder
             val inputStream = requireContext().assets.open(fileName)
-
-            // 2. Parse the MIDI file using our custom parser
             val midiParser = MidiParser()
             val notes = midiParser.parse(inputStream)
 
@@ -46,27 +59,22 @@ class PianoFragment : Fragment() {
                 Log.d("PianoFragment", "Successfully parsed ${notes.size} notes.")
             }
 
-            // 3. Set the parsed notes to our PianoRollView
             binding.pianoRollView.setNotes(notes)
-
-            // 4. Update the PitchView with the new pitch range from the PianoRollView
             binding.pitchView.setPitchRange(
                 binding.pianoRollView.currentMinPitch,
                 binding.pianoRollView.currentMaxPitch
             )
 
-
         } catch (e: IOException) {
             Log.e("PianoFragment", "Failed to load MIDI file '$fileName' from assets. Make sure the file exists.", e)
-            // Even if the file fails to load, set empty notes to draw the grid
             binding.pianoRollView.setNotes(emptyList())
-            // Also update the pitch view with default values
             binding.pitchView.setPitchRange(48, 72)
         }
     }
 
     override fun onDestroyView() {
         super.onDestroyView()
+        voicePitchDetector.stop()
         _binding = null
     }
 }
