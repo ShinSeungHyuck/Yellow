@@ -10,6 +10,10 @@ import android.view.ViewGroup
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
+import be.tarsos.dsp.AudioDispatcher
+import be.tarsos.dsp.io.android.AudioDispatcherFactory
+import be.tarsos.dsp.pitch.PitchDetectionHandler
+import be.tarsos.dsp.pitch.PitchProcessor
 import com.example.yellow.databinding.FragmentPianoBinding
 import java.io.IOException
 
@@ -18,8 +22,8 @@ class PianoFragment : Fragment() {
     private var _binding: FragmentPianoBinding? = null
     private val binding get() = _binding!!
 
-    private lateinit var voicePitchDetector: VoicePitchDetector
-    private val PERMISSION_REQUEST_CODE = 124 // Use a different code to avoid conflicts
+    private var dispatcher: AudioDispatcher? = null
+    private val PERMISSION_REQUEST_CODE = 124
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -35,28 +39,57 @@ class PianoFragment : Fragment() {
 
         loadMidiFile("placeholder.mid")
 
-        voicePitchDetector = VoicePitchDetector { pitch ->
-            activity?.runOnUiThread {
-                if (pitch > 0) {
-                    binding.pianoRollView.addLivePitch(pitch)
-                }
-            }
-        }
-
         binding.startButton.setOnClickListener {
             if (checkPermissions()) {
-                binding.pianoRollView.clearLivePitches()
-                voicePitchDetector.start()
+                startPitchDetection()
             } else {
                 requestPermissions()
             }
         }
 
         binding.stopButton.setOnClickListener {
-            voicePitchDetector.stop()
-            binding.pitchView.clearDetectedPitch()
-            binding.pianoRollView.clearLivePitches()
+            stopPitchDetection()
         }
+    }
+
+    private fun startPitchDetection() {
+        if (dispatcher?.isStopped == false) {
+            Log.d("PianoFragment", "Pitch detection is already running.")
+            return
+        }
+        
+        binding.pianoRollView.clearLivePitches()
+        binding.pitchView.clearDetectedPitch()
+
+        dispatcher = AudioDispatcherFactory.fromDefaultMicrophone(22050, 1024, 0)
+
+        val pitchDetectionHandler = PitchDetectionHandler { res, e ->
+            val pitchInHz = res.pitch
+            activity?.runOnUiThread {
+                if (pitchInHz > 0) {
+                    binding.pitchView.setDetectedPitch(pitchInHz)
+                    binding.pianoRollView.addLivePitch(pitchInHz)
+                }
+            }
+        }
+
+        val pitchProcessor = PitchProcessor(
+            PitchProcessor.PitchEstimationAlgorithm.YIN,
+            22050f,
+            1024,
+            pitchDetectionHandler
+        )
+        dispatcher?.addAudioProcessor(pitchProcessor)
+
+        Thread(dispatcher, "Audio Dispatcher").start()
+        Log.d("PianoFragment", "Started pitch detection.")
+    }
+
+    private fun stopPitchDetection() {
+        dispatcher?.stop()
+        binding.pitchView.clearDetectedPitch()
+        binding.pianoRollView.clearLivePitches()
+        Log.d("PianoFragment", "Stopped pitch detection.")
     }
 
     private fun checkPermissions(): Boolean {
@@ -81,7 +114,7 @@ class PianoFragment : Fragment() {
     ) {
         if (requestCode == PERMISSION_REQUEST_CODE) {
             if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                voicePitchDetector.start()
+                startPitchDetection()
             }
         }
     }
@@ -114,7 +147,7 @@ class PianoFragment : Fragment() {
 
     override fun onDestroyView() {
         super.onDestroyView()
-        voicePitchDetector.stop()
+        stopPitchDetection()
         _binding = null
     }
 }
