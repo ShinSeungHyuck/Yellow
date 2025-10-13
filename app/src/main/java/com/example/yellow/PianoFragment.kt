@@ -1,10 +1,14 @@
 package com.example.yellow
 
+import android.Manifest
+import android.content.pm.PackageManager
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import com.example.yellow.databinding.FragmentPianoBinding
 import java.io.IOException
@@ -15,6 +19,7 @@ class PianoFragment : Fragment() {
     private val binding get() = _binding!!
 
     private lateinit var voicePitchDetector: VoicePitchDetector
+    private val PERMISSION_REQUEST_CODE = 124 // Use a different code to avoid conflicts
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -37,12 +42,43 @@ class PianoFragment : Fragment() {
         }
 
         binding.startButton.setOnClickListener {
-            voicePitchDetector.start()
+            if (checkPermissions()) {
+                voicePitchDetector.start()
+            } else {
+                requestPermissions()
+            }
         }
 
         binding.stopButton.setOnClickListener {
             voicePitchDetector.stop()
             binding.pitchView.clearDetectedPitch()
+        }
+    }
+
+    private fun checkPermissions(): Boolean {
+        return ContextCompat.checkSelfPermission(
+            requireContext(),
+            Manifest.permission.RECORD_AUDIO
+        ) == PackageManager.PERMISSION_GRANTED
+    }
+
+    private fun requestPermissions() {
+        ActivityCompat.requestPermissions(
+            requireActivity(),
+            arrayOf(Manifest.permission.RECORD_AUDIO),
+            PERMISSION_REQUEST_CODE
+        )
+    }
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        if (requestCode == PERMISSION_REQUEST_CODE) {
+            if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                voicePitchDetector.start()
+            }
         }
     }
 
