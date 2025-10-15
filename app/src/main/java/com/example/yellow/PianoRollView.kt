@@ -47,7 +47,7 @@ class PianoRollView(context: Context, attrs: AttributeSet?) : View(context, attr
         textPaint.textSize = 28f
         textPaint.isAntiAlias = true
         livePitchPaint.color = Color.BLUE
-        livePitchPaint.style = Paint.Style.FILL // For drawing pitch bars
+        livePitchPaint.style = Paint.Style.FILL // Set paint style to fill
         notePaint.style = Paint.Style.FILL
     }
 
@@ -172,18 +172,26 @@ class PianoRollView(context: Context, attrs: AttributeSet?) : View(context, attr
             val p1 = livePitches[i]
             val p2 = livePitches[i + 1]
 
-            val x1 = p1.first * pixelsPerMs
-            val y1 = viewHeight - ((p1.second - minPitch) * keyHeight)
+            // Round the detected pitch to the nearest MIDI note number (integer)
+            val roundedMidiNote = p1.second.roundToInt()
+            if (roundedMidiNote < minPitch || roundedMidiNote > maxPitch) continue
 
-            val x2 = p2.first * pixelsPerMs
-            val y2 = viewHeight - ((p2.second - minPitch) * keyHeight)
+            // The bar starts at the time of the first point
+            val noteLeft = p1.first * pixelsPerMs
+            // The bar ends at the time of the second point
+            val noteRight = p2.first * pixelsPerMs
 
-            if (x2 < clipBounds.left || x1 > clipBounds.right) {
+            // Skip drawing if the bar is completely outside the visible area
+            if (noteRight < clipBounds.left || noteLeft > clipBounds.right) {
                 continue
             }
+            
+            // Calculate the top and bottom of the bar based on the rounded MIDI note
+            val noteTop = viewHeight - ((roundedMidiNote - minPitch + 1) * keyHeight)
+            val noteBottom = noteTop + keyHeight
 
-            canvas.drawLine(x1, y1, x2, y2, livePitchPaint)
+            // Draw the rectangle (bar)
+            canvas.drawRect(noteLeft, noteTop, noteRight, noteBottom, livePitchPaint)
         }
     }
 }
-//좋아
