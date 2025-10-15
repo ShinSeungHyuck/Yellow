@@ -9,6 +9,7 @@ import android.util.AttributeSet
 import android.util.Log
 import android.view.View
 import kotlin.math.log2
+import kotlin.math.roundToInt
 
 class PianoRollView(context: Context, attrs: AttributeSet?) : View(context, attrs) {
 
@@ -46,7 +47,7 @@ class PianoRollView(context: Context, attrs: AttributeSet?) : View(context, attr
         textPaint.textSize = 28f
         textPaint.isAntiAlias = true
         livePitchPaint.color = Color.BLUE
-        livePitchPaint.strokeWidth = 5f
+        livePitchPaint.style = Paint.Style.FILL // For drawing pitch bars
         notePaint.style = Paint.Style.FILL
     }
 
