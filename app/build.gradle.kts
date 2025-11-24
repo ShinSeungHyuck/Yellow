@@ -91,4 +91,9 @@ dependencies {
 
     // TarsosDSP from JitPack
     //implementation("com.github.JorenSix:TarsosDSP:2.5")
+
+    // Supabase
+    implementation(platform("io.supabase.kt:supabase-bom:2.2.2"))
+    implementation("io.supabase.kt:storage-kt")
+    implementation("io.ktor:ktor-client-android:2.3.11")
 }
