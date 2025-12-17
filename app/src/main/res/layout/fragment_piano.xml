@@ -7,6 +7,7 @@
     android:weightSum="2"
     tools:context=".PianoFragment">
 
+    <!-- 피아노 롤 + 피치 뷰 영역 -->
     <LinearLayout
         android:id="@+id/piano_roll_container"
         android:layout_width="match_parent"
@@ -33,11 +34,66 @@
 
     </LinearLayout>
 
+    <!-- 곡 검색 영역: 검색어 입력 + 검색 버튼 -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:gravity="center">
+        android:padding="8dp">
+
+        <EditText
+            android:id="@+id/song_search_input"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:hint="곡 제목 / 가수 검색"
+            android:singleLine="true" />
+
+        <Button
+            android:id="@+id/song_search_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:text="검색" />
+    </LinearLayout>
+
+    <!-- 키(반음) 조절 영역: 현재 키 표시 + 키 내리기/올리기 -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:padding="8dp">
+
+        <TextView
+            android:id="@+id/key_offset_text"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Key: 0 (원조)"
+            android:textSize="16sp" />
+
+        <Button
+            android:id="@+id/key_down_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="-반음" />
+
+        <Button
+            android:id="@+id/key_up_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:text="+반음" />
+    </LinearLayout>
+
+    <!-- 재생 컨트롤 (노래만): Play / Pause / Stop -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center"
+        android:paddingTop="4dp">
 
         <Button
             android:id="@+id/play_button"
@@ -49,31 +105,36 @@
             android:id="@+id/pause_button"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
             android:text="Pause" />
 
         <Button
             android:id="@+id/stop_song_button"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
             android:text="Stop" />
     </LinearLayout>
 
+    <!-- 녹음/피치 인식 컨트롤: Start / Stop -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:gravity="center">
+        android:gravity="center"
+        android:paddingBottom="8dp">
 
         <Button
             android:id="@+id/start_button"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Start" />
+            android:text="Start(녹음+재생)" />
 
         <Button
             android:id="@+id/stop_button"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
             android:text="Stop" />
     </LinearLayout>
 

@@ -1,32 +1,9 @@
-
-/*dependencies {
-    implementation(libs.androidx.core.ktx)
-    implementation(libs.androidx.appcompat)
-    implementation(libs.material)
-    implementation(libs.androidx.constraintlayout)
-    implementation(libs.androidx.lifecycle.livedata.ktx)
-    implementation(libs.androidx.lifecycle.viewmodel.ktx)
-    implementation(libs.androidx.navigation.fragment.ktx)
-    implementation(libs.androidx.navigation.ui.ktx)
-
-    // TarsosDSP from JitPack
-    implementation("com.github.JorenSix:TarsosDSP:2.5")
-}
-*/
-
-
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
+    id ("org.jetbrains.kotlin.plugin.serialization") version "2.2.0"
 }
-repositories {
-    google()
-    mavenCentral()
-    maven("https://jitpack.io") // <- JitPack 추가
-    flatDir {
-        dirs("libs") // libs 폴더 참조
-    }
-}
+
 android {
     namespace = "com.example.yellow"
     compileSdk = 36
@@ -34,24 +11,13 @@ android {
     defaultConfig {
         applicationId = "com.example.yellow"
         minSdk = 24
-        //targetSdk = 36
+        targetSdk = 34
         versionCode = 1
         versionName = "1.0"
     }
 
     buildFeatures {
         viewBinding = true
-        // dataBinding = true   // <layout> 태그 사용했다면 이 줄도 켜야 합니다
-    }
-
-    buildTypes {
-        release {
-            isMinifyEnabled = false
-            proguardFiles(
-                getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
-            )
-        }
     }
 
     compileOptions {
@@ -64,36 +30,31 @@ android {
     }
 }
 
-
 dependencies {
     implementation("androidx.core:core-ktx:1.12.0")
     implementation("androidx.appcompat:appcompat:1.6.1")
     implementation("com.google.android.material:material:1.10.0")
-
-    // Navigation Component
-    implementation("androidx.navigation:navigation-fragment-ktx:2.7.2")
-    implementation("androidx.navigation:navigation-ui-ktx:2.7.2")
-    //implementation("com.github.JorenSix:TarsosDSP:2.5")
-    //implementation("com.github.JorenSix:TarsosDSP:master-SNAPSHOT")
-    //implementation("be.tarsos.dsp:core:2.5")
-    //implementation("be.tarsos.dsp:jvm:2.5")
-    implementation(files("libs/TarsosDSPKit-release.aar"))
     implementation("androidx.constraintlayout:constraintlayout:2.2.0")
 
-    //implementation(libs.androidx.core.ktx)
-    //implementation(libs.androidx.appcompat)
-    //implementation(libs.material)
-    //implementation(libs.androidx.constraintlayout)
-    implementation(libs.androidx.lifecycle.livedata.ktx)
-    implementation(libs.androidx.lifecycle.viewmodel.ktx)
-    //implementation(libs.androidx.navigation.fragment.ktx)
-    //implementation(libs.androidx.navigation.ui.ktx)
+    implementation("androidx.navigation:navigation-fragment-ktx:2.7.2")
+    implementation("androidx.navigation:navigation-ui-ktx:2.7.2")
 
-    // TarsosDSP from JitPack
-    //implementation("com.github.JorenSix:TarsosDSP:2.5")
+    // AAR (TarsosDSPKit)
+    implementation(files("libs/TarsosDSPKit-release.aar"))
 
-    // Supabase
-    implementation(platform("io.supabase.kt:supabase-bom:2.2.2"))
-    implementation("io.supabase.kt:storage-kt")
+    // Ktor (Supabase 기반 라이브러리 요구)
     implementation("io.ktor:ktor-client-android:2.3.11")
+
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation("com.google.android.exoplayer:exoplayer:2.19.1")
+
+    // ✅ Supabase (정식 그룹 ID / 최신 3.2.6)
+    implementation(platform("io.github.jan-tennert.supabase:bom:3.2.6"))
+    implementation("io.github.jan-tennert.supabase:auth-kt")
+    implementation("io.github.jan-tennert.supabase:storage-kt")
+    implementation("io.github.jan-tennert.supabase:postgrest-kt")
+    implementation("io.github.jan-tennert.supabase:realtime-kt")
+    implementation("io.ktor:ktor-client-android:3.2.1")
+    implementation("io.ktor:ktor-client-core:3.2.1")
+    implementation("io.ktor:ktor-utils:3.2.1")
 }

@@ -1,0 +1,23 @@
+name = "r2-music-search"
+main = "src/worker.ts"
+compatibility_date = "2024-11-01"
+
+account_id = "1e15911977b724a73614023251c23385"
+
+# Android 앱에서 호출할 검색 API는
+# https://r2-music-search.<your-account>.workers.dev/search?bucket=melody&q=...
+# 형태로 사용합니다.
+
+[vars]
+MELODY_PUBLIC_BASE = "https://pub-86701e7243ce47338339a06872cba4e5.r2.dev/"
+MIDI_PUBLIC_BASE   = "https://pub-cac2af06737f4edeb63de2e621719226.r2.dev/"
+
+[[r2_buckets]]
+binding = "MELODY_BUCKET"
+bucket_name = "melody"
+preview_bucket_name = "melody"
+
+[[r2_buckets]]
+binding = "MIDI_BUCKET"
+bucket_name = "midi"
+preview_bucket_name = "midi"
