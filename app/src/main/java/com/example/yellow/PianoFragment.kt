@@ -7,6 +7,7 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Toast
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
@@ -23,6 +24,7 @@ import com.google.android.exoplayer2.Player
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.io.IOException
 import java.net.HttpURLConnection
@@ -31,12 +33,6 @@ import java.net.URLEncoder
 import kotlin.math.pow
 
 class PianoFragment : Fragment() {
-
-    // Cloudflare Worker 검색 API 기본 URL
-    private val SEARCH_API_BASE = "https://r2-music-search.den1116.workers.dev/search"
-
-    // 검색 결과용 데이터 클래스 (Worker 응답 matches 구조와 맞춤)
-    data class SearchMatch(val key: String, val size: Long, val url: String)
 
     private var _binding: FragmentPianoBinding? = null
     private val binding get() = _binding!!
@@ -47,10 +43,16 @@ class PianoFragment : Fragment() {
     // ExoPlayer
     private var player: ExoPlayer? = null
 
-    // 키 조절 상태 (반음 단위, 예: -6 ~ +6)
+    // 키 조절 상태 (반음 단위, -6 ~ +6)
     private var currentSemitoneOffset: Int = 0
     private val MIN_SEMITONES = -6
     private val MAX_SEMITONES = 6
+
+    // 곡 로드 여부
+    private var hasLoadedSong: Boolean = false
+
+    // Cloudflare Worker 엔드포인트
+    private val workerBaseUrl = "https://r2-music-search.den1116.workers.dev"
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -64,87 +66,195 @@ class PianoFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // 초기 키 표시
+        // 기본 상태: 곡 없음
+        binding.currentSongText.text = "현재 곡: 없음"
+
+        // 키 SeekBar 설정 (-6 ~ +6 을 0~12 범위로 매핑)
+        binding.keySeekBar.max = MAX_SEMITONES - MIN_SEMITONES // 12
+        binding.keySeekBar.progress = currentSemitoneOffset - MIN_SEMITONES
         updateKeyOffsetText()
 
-        // ───────────── 재생 + 녹음/피치인식 버튼 ─────────────
+        binding.keySeekBar.setOnSeekBarChangeListener(
+            object : android.widget.SeekBar.OnSeekBarChangeListener {
+                override fun onProgressChanged(
+                    seekBar: android.widget.SeekBar?,
+                    progress: Int,
+                    fromUser: Boolean
+                ) {
+                    currentSemitoneOffset = MIN_SEMITONES + progress
+                    updatePlayerPitch()
+                    updateKeyOffsetText()
+                }
 
-        // 녹음 + 피치 인식 + 동시에 노래 재생
-        binding.startButton.setOnClickListener {
-            if (checkPermissions()) {
-                startPitchDetection()
-                player?.playWhenReady = true
-            } else {
-                requestPermissions()
+                override fun onStartTrackingTouch(seekBar: android.widget.SeekBar?) {}
+                override fun onStopTrackingTouch(seekBar: android.widget.SeekBar?) {}
             }
-        }
+        )
 
-        binding.stopButton.setOnClickListener {
-            stopPitchDetection()
-            player?.let {
-                it.pause()
-                it.seekTo(0)
-            }
-        }
-
-        // 노래만 컨트롤하는 버튼 (Play / Pause / Stop)
-        binding.playButton.setOnClickListener {
-            val p = player
-            if (p == null) {
-                Log.w("PianoFragment", "Player is null. Search and prepare first.")
+        // 검색 버튼: 곡 검색 + MIDI/MP3 로드
+        binding.searchButton.setOnClickListener {
+            val query = binding.songQueryInput.text.toString().trim()
+            if (query.isEmpty()) {
+                Toast.makeText(requireContext(), "곡 제목을 입력해 주세요.", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
-            p.playWhenReady = true   // 준비 중이면 준비 완료 후 자동 재생
+            searchAndLoadSong(query)
         }
 
-        binding.pauseButton.setOnClickListener {
+        // 시작 버튼: 녹음 + 재생 동시에 시작
+        binding.startButton.setOnClickListener {
+            if (!hasLoadedSong || player == null) {
+                Toast.makeText(requireContext(), "먼저 곡을 검색해서 선택해 주세요.", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+
+            if (!checkPermissions()) {
+                requestPermissions()
+                return@setOnClickListener
+            }
+
+            startPitchDetection()
+            player?.playWhenReady = true
+        }
+
+        // 정지 버튼: 녹음/재생만 멈춤 (위치 유지)
+        binding.stopButton.setOnClickListener {
+            stopPitchDetection()
             player?.pause()
         }
 
-        binding.stopSongButton.setOnClickListener {
-            player?.let {
-                it.pause()
-                it.seekTo(0)
-            }
+        // 초기화 버튼: 화면에 보이는 '초기화'(stop_song_button) + 숨겨진 resetButton 둘 다 같은 동작
+        binding.resetButton.setOnClickListener { resetPlaybackAndKey() }
+        binding.stopSongButton.setOnClickListener { resetPlaybackAndKey() }
+    }
+
+    /**
+     * 재생/녹음/키 상태 초기화 공통 함수
+     */
+    private fun resetPlaybackAndKey() {
+        stopPitchDetection()
+        player?.let {
+            it.pause()
+            it.seekTo(0)
         }
+        currentSemitoneOffset = 0
+        binding.keySeekBar.progress = currentSemitoneOffset - MIN_SEMITONES
+        updatePlayerPitch()
+        updateKeyOffsetText()
+        binding.pianoRollView.clearLivePitches()
+        // MIDI 악보는 유지
+    }
 
-        // ───────────── 키(반음) 조절 버튼 ─────────────
+    /**
+     * Worker 를 이용해서 melody/midi 둘 다 검색 후
+     * 첫 번째 매치를 사용해 MP3 재생 + MIDI 피아노롤 로드
+     */
+    private fun searchAndLoadSong(query: String) {
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val encoded = URLEncoder.encode(query, "UTF-8")
 
-        binding.keyUpButton.setOnClickListener {
-            if (currentSemitoneOffset < MAX_SEMITONES) {
-                currentSemitoneOffset++
-                updatePlayerPitch()
-                updateKeyOffsetText()
-            }
-        }
+                // Worker 쿼리 파라미터: query 사용
+                val melodyUrl =
+                    "$workerBaseUrl/search?bucket=melody&q=$encoded"
+                val midiUrl =
+                    "$workerBaseUrl/search?bucket=midi&q=$encoded"
 
-        binding.keyDownButton.setOnClickListener {
-            if (currentSemitoneOffset > MIN_SEMITONES) {
-                currentSemitoneOffset--
-                updatePlayerPitch()
-                updateKeyOffsetText()
-            }
-        }
+                Log.d("PianoFragment", "Melody search URL = $melodyUrl")
+                Log.d("PianoFragment", "MIDI search URL = $midiUrl")
 
-        // ───────────── 곡 검색 버튼 ─────────────
-        // 검색어(제목, 가수 일부 등) 입력 → Worker search → mp3 & MIDI 로드
+                val melodyJsonText = getStringFromUrl(melodyUrl)
+                val midiJsonText = getStringFromUrl(midiUrl)
 
-        binding.songSearchButton.setOnClickListener {
-            val query = binding.songSearchInput.text.toString().trim()
-            if (query.isNotEmpty()) {
-                searchAndLoadSong(query)
-            } else {
-                Log.w("PianoFragment", "Search query is empty.")
+                Log.d("PianoFragment", "Melody JSON = $melodyJsonText")
+                Log.d("PianoFragment", "MIDI JSON = $midiJsonText")
+
+                val melodyObj = JSONObject(melodyJsonText)
+                val midiObj = JSONObject(midiJsonText)
+
+                // matches 또는 results 둘 다 대응
+                val melodyMatches = melodyObj.optJSONArray("matches")
+                    ?: melodyObj.optJSONArray("results")
+                val midiMatches = midiObj.optJSONArray("matches")
+                    ?: midiObj.optJSONArray("results")
+
+                if (melodyMatches == null || melodyMatches.length() == 0 ||
+                    midiMatches == null || midiMatches.length() == 0
+                ) {
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(
+                            requireContext(),
+                            "검색 결과가 없습니다.",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                    return@launch
+                }
+
+                val melodyFirst = melodyMatches.getJSONObject(0)
+                val midiFirst = midiMatches.getJSONObject(0)
+
+                val melodyFileName = melodyFirst.optString("key")
+                val melodyFileUrl = melodyFirst.optString("url")
+                val midiFileUrl = midiFirst.optString("url")
+
+                Log.d("PianoFragment", "Selected melody = $melodyFileName")
+                Log.d("PianoFragment", "Melody URL = $melodyFileUrl")
+                Log.d("PianoFragment", "MIDI URL = $midiFileUrl")
+
+                withContext(Dispatchers.Main) {
+                    // 곡 정보 표시
+                    binding.currentSongText.text =
+                        "현재 곡: ${melodyFileName.ifEmpty { query }}"
+
+                    // 플레이어 준비
+                    preparePlayer(melodyFileUrl)
+                    hasLoadedSong = true
+
+                    // MIDI 로드
+                    loadMidiFromUrl(midiFileUrl)
+                }
+            } catch (e: Exception) {
+                Log.e("PianoFragment", "Failed to search/load song", e)
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(
+                        requireContext(),
+                        "곡 검색/로딩 중 오류가 발생했습니다.",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
             }
         }
     }
 
-    // =========================================================
-    // ExoPlayer 관련
-    // =========================================================
+    /**
+     * 간단한 HTTP GET 헬퍼 (상태코드 로그용)
+     */
+    private fun getStringFromUrl(urlString: String): String {
+        val url = URL(urlString)
+        val conn = (url.openConnection() as HttpURLConnection).apply {
+            connectTimeout = 10000
+            readTimeout = 10000
+        }
+
+        return try {
+            val code = conn.responseCode
+            Log.d("PianoFragment", "HTTP GET $urlString -> $code")
+
+            val stream = if (code in 200..299) {
+                conn.inputStream
+            } else {
+                conn.errorStream ?: conn.inputStream
+            }
+
+            stream.bufferedReader().use { it.readText() }
+        } finally {
+            conn.disconnect()
+        }
+    }
 
     /**
-     * ExoPlayer 준비 (주어진 URL의 mp3를 재생할 준비를 함)
+     * ExoPlayer 준비
      */
     private fun preparePlayer(url: String) {
         player?.release()
@@ -160,10 +270,15 @@ class PianoFragment : Fragment() {
         exoPlayer.addListener(object : Player.Listener {
             override fun onPlayerError(error: PlaybackException) {
                 Log.e("PianoFragment", "ExoPlayer error: ${error.errorCodeName}", error)
+                Toast.makeText(
+                    requireContext(),
+                    "오디오 재생 중 오류가 발생했습니다.",
+                    Toast.LENGTH_SHORT
+                ).show()
             }
         })
 
-        // 현재 반음 offset 기준으로 피치 적용
+        // 현재 키 상태 반영
         updatePlayerPitch()
 
         exoPlayer.prepare()
@@ -171,18 +286,18 @@ class PianoFragment : Fragment() {
     }
 
     /**
-     * 반음 단위 오프셋을 ExoPlayer 피치로 적용
-     *  - 반음 n 만큼 이동 시 배율 = 2^(n/12)
-     *  - 속도(speed)는 1.0 그대로, pitch만 조정하여 키만 변화시키고 템포는 유지
+     * 반음 단위 오프셋을 ExoPlayer 피치에 적용
      */
     private fun updatePlayerPitch() {
         val p = player ?: return
 
+        // 반음 → 배율 : 2^(n/12)
         val pitchFactor = 2.0.pow(currentSemitoneOffset / 12.0).toFloat()
+
         val currentParams = p.playbackParameters
         val newParams = PlaybackParameters(
-            /* speed = */ currentParams.speed,
-            /* pitch = */ pitchFactor
+            currentParams.speed, // 속도는 그대로
+            pitchFactor          // 피치만 변경
         )
         p.playbackParameters = newParams
 
@@ -190,6 +305,7 @@ class PianoFragment : Fragment() {
             "PianoFragment",
             "Pitch updated. semitones=$currentSemitoneOffset, factor=$pitchFactor"
         )
+        Log.d("PianoFragment", "Pitch updated. semitones=$currentSemitoneOffset, factor=$pitchFactor")
     }
 
     /**
@@ -204,95 +320,7 @@ class PianoFragment : Fragment() {
         binding.keyOffsetText.text = text
     }
 
-    // =========================================================
-    // Cloudflare Worker 검색 호출
-    // =========================================================
-
-    private fun searchAndLoadSong(query: String) {
-        CoroutineScope(Dispatchers.IO).launch {
-            try {
-                val encoded = URLEncoder.encode(query, "UTF-8")
-
-                val melodyApiUrl = "$SEARCH_API_BASE?bucket=melody&q=$encoded"
-                val midiApiUrl = "$SEARCH_API_BASE?bucket=midi&q=$encoded"
-
-                // 멜로디 검색
-                val melodyMatches = fetchMatches(melodyApiUrl)
-                val melodyUrl = melodyMatches.firstOrNull()?.url
-
-                // 미디 검색
-                val midiMatches = fetchMatches(midiApiUrl)
-                val midiUrl = midiMatches.firstOrNull()?.url
-
-                Log.d(
-                    "PianoFragment",
-                    "Search result -> melodyUrl=$melodyUrl, midiUrl=$midiUrl"
-                )
-
-                activity?.runOnUiThread {
-                    // mp3 교체
-                    melodyUrl?.let { url ->
-                        preparePlayer(url)
-                    }
-
-                    // midi 교체
-                    midiUrl?.let { url ->
-                        loadMidiFromUrl(url)
-                    }
-                }
-            } catch (e: Exception) {
-                Log.e("PianoFragment", "Failed to call search API.", e)
-            }
-        }
-    }
-
-    /**
-     * 주어진 검색 API URL에서 JSON 응답 파싱 → List<SearchMatch>
-     */
-    private fun fetchMatches(apiUrl: String): List<SearchMatch> {
-        return try {
-            Log.d("PianoFragment", "Calling search API: $apiUrl")
-
-            val conn = URL(apiUrl).openConnection() as HttpURLConnection
-            conn.requestMethod = "GET"
-            conn.connectTimeout = 10_000
-            conn.readTimeout = 10_000
-
-            val code = conn.responseCode
-            val stream =
-                if (code in 200..299) conn.inputStream else conn.errorStream
-
-            val body = stream?.use { it.readBytes() }?.toString(Charsets.UTF_8) ?: ""
-
-            if (code !in 200..299) {
-                Log.e("PianoFragment", "Search API error ($apiUrl): code=$code, body=$body")
-                return emptyList()
-            }
-
-            val json = JSONObject(body)
-            val matchesJson = json.optJSONArray("matches") ?: return emptyList()
-
-            val result = mutableListOf<SearchMatch>()
-            for (i in 0 until matchesJson.length()) {
-                val obj = matchesJson.optJSONObject(i) ?: continue
-                val key = obj.optString("key", "")
-                val size = obj.optLong("size", 0L)
-                val url = obj.optString("url", "")
-
-                if (url.isNotBlank()) {
-                    result.add(SearchMatch(key, size, url))
-                }
-            }
-            result
-        } catch (e: Exception) {
-            Log.e("PianoFragment", "fetchMatches failed ($apiUrl)", e)
-            emptyList()
-        }
-    }
-
-    // =========================================================
-    // 피치 인식(TarsosDSP) 관련
-    // =========================================================
+    // ======= 피치 인식 관련 =======
 
     private fun startPitchDetection() {
         if (dispatcher?.isStopped == false) {
@@ -334,9 +362,7 @@ class PianoFragment : Fragment() {
         Log.d("PianoFragment", "Stopped pitch detection.")
     }
 
-    // =========================================================
-    // 권한
-    // =========================================================
+    // ======= 권한 =======
 
     private fun checkPermissions(): Boolean {
         return ContextCompat.checkSelfPermission(
@@ -360,26 +386,25 @@ class PianoFragment : Fragment() {
     ) {
         if (requestCode == PERMISSION_REQUEST_CODE) {
             if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                startPitchDetection()
-                player?.playWhenReady = true
+                if (hasLoadedSong && player != null) {
+                    startPitchDetection()
+                    player?.playWhenReady = true
+                }
             }
         }
     }
 
-    // =========================================================
-    // MIDI 로딩 (URL 이용)
-    // =========================================================
+    // ======= MIDI 로딩 (URL 이용) =======
 
     private fun loadMidiFromUrl(url: String) {
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 Log.d("PianoFragment", "Attempting to download MIDI file from URL: $url")
+                val inputStream = URL(url).openStream()
                 val midiParser = MidiParser()
-                val notes = URL(url).openStream().use { input ->
-                    midiParser.parse(input)
-                }
+                val notes = midiParser.parse(inputStream)
 
-                activity?.runOnUiThread {
+                withContext(Dispatchers.Main) {
                     if (notes.isEmpty()) {
                         Log.w(
                             "PianoFragment",
@@ -400,7 +425,7 @@ class PianoFragment : Fragment() {
                 }
             } catch (e: Exception) {
                 Log.e("PianoFragment", "Failed to load MIDI file from URL.", e)
-                activity?.runOnUiThread {
+                withContext(Dispatchers.Main) {
                     binding.pianoRollView.setNotes(emptyList())
                     binding.pitchView.setPitchRange(48, 72)
                 }
@@ -408,18 +433,21 @@ class PianoFragment : Fragment() {
         }
     }
 
-    // (옵션) 로컬 assets 에서 MIDI 로드 – 필요 시 사용
+    // (선택) 로컬 assets 에서 MIDI 로드 – 필요 시 사용
     private fun loadMidiFileFromAssets(fileName: String) {
         try {
-            Log.d("PianoFragment", "Attempting to load MIDI file from assets: $fileName")
+            Log.d("PianoFragment", "Attempting to load MIDI file: $fileName")
             val inputStream = requireContext().assets.open(fileName)
             val midiParser = MidiParser()
             val notes = midiParser.parse(inputStream)
 
             if (notes.isEmpty()) {
-                Log.w("PianoFragment", "MIDI parsing resulted in 0 notes. Check the MIDI file or parser logic.")
+                Log.w(
+                    "PianoFragment",
+                    "MIDI parsing resulted in 0 notes. Check the MIDI file or parser logic."
+                )
             } else {
-                Log.d("PianoFragment", "Successfully parsed ${notes.size} notes from assets.")
+                Log.d("PianoFragment", "Successfully parsed ${notes.size} notes.")
             }
 
             binding.pianoRollView.setNotes(notes)
@@ -427,6 +455,7 @@ class PianoFragment : Fragment() {
                 binding.pianoRollView.currentMinPitch,
                 binding.pianoRollView.currentMaxPitch
             )
+
         } catch (e: IOException) {
             Log.e(
                 "PianoFragment",
@@ -437,8 +466,6 @@ class PianoFragment : Fragment() {
             binding.pitchView.setPitchRange(48, 72)
         }
     }
-
-    // =========================================================
 
     override fun onDestroyView() {
         super.onDestroyView()
