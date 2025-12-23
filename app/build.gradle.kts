@@ -41,6 +41,7 @@ dependencies {
 
     // AAR (TarsosDSPKit)
     implementation(files("libs/TarsosDSPKit-release.aar"))
+    //implementation files('libs/TarsosDSPKit-release.aar')
 
     // Ktor (Supabase 기반 라이브러리 요구)
     implementation("io.ktor:ktor-client-android:2.3.11")

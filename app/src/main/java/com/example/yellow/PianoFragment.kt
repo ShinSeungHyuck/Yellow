@@ -21,6 +21,7 @@ import com.google.android.exoplayer2.MediaItem
 import com.google.android.exoplayer2.PlaybackException
 import com.google.android.exoplayer2.PlaybackParameters
 import com.google.android.exoplayer2.Player
+import com.google.android.exoplayer2.util.MimeTypes
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -91,7 +92,7 @@ class PianoFragment : Fragment() {
             }
         )
 
-        // 검색 버튼: 곡 검색 + MIDI/MP3 로드
+        // 검색 버튼: 곡 검색 + MIDI/MP4 로드
         binding.searchButton.setOnClickListener {
             val query = binding.songQueryInput.text.toString().trim()
             if (query.isEmpty()) {
@@ -147,7 +148,7 @@ class PianoFragment : Fragment() {
 
     /**
      * Worker 를 이용해서 melody/midi 둘 다 검색 후
-     * 첫 번째 매치를 사용해 MP3 재생 + MIDI 피아노롤 로드
+     * 첫 번째 매치를 사용해 MP4 재생 + MIDI 피아노롤 로드
      */
     private fun searchAndLoadSong(query: String) {
         CoroutineScope(Dispatchers.IO).launch {
@@ -254,7 +255,7 @@ class PianoFragment : Fragment() {
     }
 
     /**
-     * ExoPlayer 준비
+     * ExoPlayer 준비 (MP4 컨테이너 명시)
      */
     private fun preparePlayer(url: String) {
         player?.release()
@@ -264,7 +265,14 @@ class PianoFragment : Fragment() {
         val exoPlayer = ExoPlayer.Builder(requireContext()).build()
         player = exoPlayer
 
-        val mediaItem = MediaItem.fromUri(url)
+        // 핵심: MP4로 MIME 타입을 명시해 추출기/포맷 오인 문제를 줄임
+        val mediaItem = MediaItem.Builder()
+            .setUri(url)
+            .setMimeType(MimeTypes.APPLICATION_MP4) // 일반 mp4(컨테이너)
+            // 오디오 전용(mp4 컨테이너, 사실상 m4a 성격)이라면 아래로 바꿔도 됩니다.
+            // .setMimeType(MimeTypes.AUDIO_MP4)
+            .build()
+
         exoPlayer.setMediaItem(mediaItem)
 
         exoPlayer.addListener(object : Player.Listener {
@@ -305,7 +313,6 @@ class PianoFragment : Fragment() {
             "PianoFragment",
             "Pitch updated. semitones=$currentSemitoneOffset, factor=$pitchFactor"
         )
-        Log.d("PianoFragment", "Pitch updated. semitones=$currentSemitoneOffset, factor=$pitchFactor")
     }
 
     /**
