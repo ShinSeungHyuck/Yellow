@@ -6,6 +6,7 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.util.AttributeSet
 import android.view.View
+import kotlin.math.log2
 
 class PitchView(context: Context, attrs: AttributeSet?) : View(context, attrs) {
 
@@ -18,7 +19,7 @@ class PitchView(context: Context, attrs: AttributeSet?) : View(context, attrs) {
     private var detectedPitch: Float? = null
 
     private val pitchNames = arrayOf("C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B")
-    private val timeAxisHeight = 40f // PianoRollView와 동일한 값
+    private val timeAxisHeight = 40f
 
     init {
         textPaint.color = Color.BLACK
@@ -33,13 +34,24 @@ class PitchView(context: Context, attrs: AttributeSet?) : View(context, attrs) {
     fun setPitchRange(minPitch: Int, maxPitch: Int) {
         this.minPitch = minPitch
         this.maxPitch = maxPitch
-        requestLayout() // 범위가 변경되었으므로 레이아웃을 다시 계산합니다.
-        invalidate() // 다시 그립니다.
+        requestLayout()
+        invalidate()
     }
 
+    /** 기존 사용(= MIDI note float로 들어오는 경우) */
     fun setDetectedPitch(pitch: Float) {
         this.detectedPitch = pitch
         invalidate()
+    }
+
+    /** (중요) PianoFragment에서 setPitchHz를 부르면 여기가 받아서 변환해줌 */
+    fun setPitchHz(pitchHz: Float) {
+        if (pitchHz <= 0f) {
+            clearDetectedPitch()
+            return
+        }
+        val midi = (69 + 12 * log2(pitchHz / 440f)).toFloat()
+        setDetectedPitch(midi)
     }
 
     fun clearDetectedPitch() {
@@ -64,10 +76,9 @@ class PitchView(context: Context, attrs: AttributeSet?) : View(context, attrs) {
             val name = pitchNames[pitch % 12]
             val pitchLabel = "$name$octave"
 
-            // 키의 중앙에 텍스트를 그립니다.
-            val y = availableHeight - ((pitch - minPitch) * keyHeight) - (keyHeight / 2) + (textPaint.descent() - textPaint.ascent()) / 4
+            val y = availableHeight - ((pitch - minPitch) * keyHeight) - (keyHeight / 2) +
+                    (textPaint.descent() - textPaint.ascent()) / 4
 
-            // 가로선을 그립니다.
             val lineY = availableHeight - ((pitch - minPitch) * keyHeight)
             canvas.drawLine(0f, lineY, width.toFloat(), lineY, gridPaint)
 
@@ -80,4 +91,3 @@ class PitchView(context: Context, attrs: AttributeSet?) : View(context, attrs) {
         }
     }
 }
-//여까지

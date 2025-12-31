@@ -5,6 +5,7 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Rect
+import android.os.SystemClock
 import android.util.AttributeSet
 import android.util.Log
 import android.view.View
@@ -30,38 +31,72 @@ class PianoRollView(context: Context, attrs: AttributeSet?) : View(context, attr
         private set
     var maxPitch = 72
         private set
-    private var totalDurationMs = 10000L
+
+    private var totalDurationMs = 10_000L
 
     private val timeAxisHeight = 60f
-    private var keyHeight = 40f // This is now calculated dynamically
-    private val pixelsPerSecond = 100f // Increased pixels per second for better visualization
+    private var keyHeight = 40f
+    private val pixelsPerSecond = 100f
 
+    // livePitches: (timelineMs, midiNoteFloat)
+    // timelineMs는 "0부터 시작하는 상대시간(ms)" 이어야 정상 동작함.
     private val livePitches = mutableListOf<Pair<Long, Float>>()
-    private var recordingStartTime = -1L
     private val clipBounds = Rect()
+
+    // (중요) addLivePitch(Hz)에서 사용할 "상대시간 기준점"
+    private var liveBaseElapsedRealtime: Long? = null
 
     init {
         gridPaint.color = Color.LTGRAY
         gridPaint.strokeWidth = 1f
+
         textPaint.color = Color.DKGRAY
         textPaint.textSize = 28f
         textPaint.isAntiAlias = true
+
         livePitchPaint.color = Color.BLUE
-        livePitchPaint.style = Paint.Style.FILL // Set paint style to fill
+        livePitchPaint.style = Paint.Style.FILL
+
         notePaint.style = Paint.Style.FILL
     }
 
+    // 외부에서 기준점 설정(예: 녹음 시작 시점 / 플레이 시작 시점)
+    fun resetLiveTimelineBase(baseElapsedRealtime: Long = SystemClock.elapsedRealtime()) {
+        liveBaseElapsedRealtime = baseElapsedRealtime
+    }
+
+    // 기존 유지
     fun setNotes(newNotes: List<MusicalNote>) {
+        setNotes(newNotes, null, null, resetLivePitches = true)
+    }
+
+    // 고정 range 지원 + 라이브피치 유지 옵션
+    fun setNotes(
+        newNotes: List<MusicalNote>,
+        fixedMinPitch: Int?,
+        fixedMaxPitch: Int?,
+        resetLivePitches: Boolean
+    ) {
         this.notes = newNotes.sortedBy { it.startTime }
+
         if (newNotes.isNotEmpty()) {
-            minPitch = (newNotes.minOf { it.note } - 4).coerceAtLeast(0)
-            maxPitch = (newNotes.maxOf { it.note } + 4).coerceAtMost(83) // Cap max pitch to B5 (83)
-            totalDurationMs = newNotes.maxOfOrNull { it.startTime + it.duration } ?: 10000L
-            Log.d("PianoRollView", "Notes set. Count: ${notes.size}, Duration: ${totalDurationMs}ms, Pitch Range: $minPitch-$maxPitch")
+            val computedMin = (newNotes.minOf { it.note } - 4).coerceAtLeast(0)
+            val computedMax = (newNotes.maxOf { it.note } + 4).coerceAtMost(83)
+
+            minPitch = fixedMinPitch ?: computedMin
+            maxPitch = fixedMaxPitch ?: computedMax
+
+            totalDurationMs = newNotes.maxOfOrNull { it.startTime + it.duration } ?: 10_000L
+            Log.d("PianoRollView", "Notes set. Count=${notes.size}, Duration=${totalDurationMs}ms, Range=$minPitch-$maxPitch")
+        } else {
+            totalDurationMs = 10_000L
         }
-        livePitches.clear()
-        recordingStartTime = -1L
-        updateKeyHeight() // Recalculate key height as the range might have changed
+
+        if (resetLivePitches) {
+            livePitches.clear()
+        }
+
+        updateKeyHeight()
         requestLayout()
         invalidate()
     }
@@ -71,33 +106,57 @@ class PianoRollView(context: Context, attrs: AttributeSet?) : View(context, attr
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
         super.onSizeChanged(w, h, oldw, oldh)
-        if (h > 0) {
-            updateKeyHeight() // Update key height when view size is known
-        }
+        updateKeyHeight()
     }
 
     private fun updateKeyHeight() {
-        if (height == 0) return // Don't do anything if height is not set yet
+        if (height == 0) return
         val availableHeight = height - timeAxisHeight
         val pitchRange = (maxPitch - minPitch + 1).coerceAtLeast(1)
         keyHeight = availableHeight / pitchRange
-        invalidate() // Redraw as key height has changed
+        invalidate()
     }
 
-
+    /**
+     * (A) Hz 입력: "상대시간(ms)" 기반으로 타임라인에 추가
+     * - 기존 코드의 System.currentTimeMillis() 사용이 문제를 만들었음
+     * - elapsedRealtime() 기준점(liveBaseElapsedRealtime)으로 상대시간을 계산
+     */
     fun addLivePitch(pitchInHz: Float) {
-        if (recordingStartTime == -1L) {
-            recordingStartTime = System.currentTimeMillis()
+        if (pitchInHz <= 0) return
+
+        val midiNote = (69 + 12 * log2(pitchInHz / 440f)).toFloat()
+
+        val base = liveBaseElapsedRealtime ?: run {
+            val now = SystemClock.elapsedRealtime()
+            liveBaseElapsedRealtime = now
+            now
         }
-        val elapsedTime = System.currentTimeMillis() - recordingStartTime
-        val midiNote = if (pitchInHz > 0) (69 + 12 * log2(pitchInHz / 440f)) else 0.0
-        livePitches.add(Pair(elapsedTime, midiNote.toFloat()))
+
+        val now = SystemClock.elapsedRealtime()
+        val timelineMs = (now - base).coerceAtLeast(0L)
+
+        addLivePitchAt(timelineMs, midiNote)
+    }
+
+    /**
+     * (B) 외부 타임라인 직접 주입 (권장)
+     * - 예: player.currentPosition(ms) 를 그대로 넣어야 음악과 정렬됨
+     */
+    fun addLivePitchAt(timeMs: Long, midiNote: Float) {
+        livePitches.add(timeMs to midiNote)
+
+        // view 폭이 너무 짧아서 잘리는 것을 방지
+        if (timeMs + 2000 > totalDurationMs) {
+            totalDurationMs = timeMs + 2000
+            requestLayout()
+        }
+
         invalidate()
     }
 
     fun clearLivePitches() {
         livePitches.clear()
-        recordingStartTime = -1L
         invalidate()
     }
 
@@ -119,22 +178,19 @@ class PianoRollView(context: Context, attrs: AttributeSet?) : View(context, attr
         val viewHeight = height - timeAxisHeight
         val pitchRange = maxPitch - minPitch
 
-        // --- Vertical Grid Lines (Time) ---
         val firstSecond = (clipBounds.left / pixelsPerSecond).toInt().coerceAtLeast(0)
-        val lastSecond = ((clipBounds.right / pixelsPerSecond) + 1).toInt().coerceAtMost((totalDurationMs/1000).toInt())
+        val lastSecond = ((clipBounds.right / pixelsPerSecond) + 1).toInt()
+            .coerceAtMost((totalDurationMs / 1000).toInt() + 1)
 
         textPaint.textAlign = Paint.Align.CENTER
         for (sec in firstSecond..lastSecond) {
             val x = sec * pixelsPerSecond
-            if (sec % 5 == 0) { // Display label every 5 seconds
-                canvas.drawLine(x, 0f, x, viewHeight, gridPaint)
+            canvas.drawLine(x, 0f, x, viewHeight, gridPaint)
+            if (sec % 5 == 0) {
                 canvas.drawText("${sec}s", x, viewHeight + 40f, textPaint)
-            } else { // Just draw a smaller line for other seconds
-                 canvas.drawLine(x, 0f, x, viewHeight, gridPaint)
             }
         }
 
-        // --- Horizontal Grid Lines (Pitch) ---
         for (i in 0..pitchRange) {
             val y = viewHeight - (i * keyHeight)
             canvas.drawLine(0f, y, width.toFloat(), y, gridPaint)
@@ -148,23 +204,22 @@ class PianoRollView(context: Context, attrs: AttributeSet?) : View(context, attr
         val pixelsPerMs = pixelsPerSecond / 1000f
 
         for (note in notes) {
-            val noteLeft = (note.startTime * pixelsPerMs)
-            val noteRight = noteLeft + (note.duration * pixelsPerMs)
+            val left = note.startTime * pixelsPerMs
+            val right = left + note.duration * pixelsPerMs
 
-            if (noteRight < clipBounds.left || noteLeft > clipBounds.right) {
-                continue
-            }
+            if (right < clipBounds.left || left > clipBounds.right) continue
 
-            val noteTop = viewHeight - ((note.note - minPitch + 1) * keyHeight)
-            val noteBottom = noteTop + keyHeight
+            val top = viewHeight - ((note.note - minPitch + 1) * keyHeight)
+            val bottom = top + keyHeight
 
             notePaint.color = noteColors[note.note % noteColors.size]
-            canvas.drawRect(noteLeft, noteTop, noteRight, noteBottom, notePaint)
+            canvas.drawRect(left, top, right, bottom, notePaint)
         }
     }
 
     private fun drawLivePitches(canvas: Canvas) {
         if (livePitches.size < 2) return
+
         val viewHeight = height - timeAxisHeight
         val pixelsPerMs = pixelsPerSecond / 1000f
 
@@ -172,26 +227,21 @@ class PianoRollView(context: Context, attrs: AttributeSet?) : View(context, attr
             val p1 = livePitches[i]
             val p2 = livePitches[i + 1]
 
-            // Round the detected pitch to the nearest MIDI note number (integer)
-            val roundedMidiNote = p1.second.roundToInt()
-            if (roundedMidiNote < minPitch || roundedMidiNote > maxPitch) continue
+            // 타임라인이 역전되면 스킵(방어)
+            if (p2.first <= p1.first) continue
 
-            // The bar starts at the time of the first point
-            val noteLeft = p1.first * pixelsPerMs
-            // The bar ends at the time of the second point
-            val noteRight = p2.first * pixelsPerMs
+            val roundedMidi = p1.second.roundToInt()
+            if (roundedMidi < minPitch || roundedMidi > maxPitch) continue
 
-            // Skip drawing if the bar is completely outside the visible area
-            if (noteRight < clipBounds.left || noteLeft > clipBounds.right) {
-                continue
-            }
-            
-            // Calculate the top and bottom of the bar based on the rounded MIDI note
-            val noteTop = viewHeight - ((roundedMidiNote - minPitch + 1) * keyHeight)
-            val noteBottom = noteTop + keyHeight
+            val left = p1.first * pixelsPerMs
+            val right = p2.first * pixelsPerMs
 
-            // Draw the rectangle (bar)
-            canvas.drawRect(noteLeft, noteTop, noteRight, noteBottom, livePitchPaint)
+            if (right < clipBounds.left || left > clipBounds.right) continue
+
+            val top = viewHeight - ((roundedMidi - minPitch + 1) * keyHeight)
+            val bottom = top + keyHeight
+
+            canvas.drawRect(left, top, right, bottom, livePitchPaint)
         }
     }
 }

@@ -1,5 +1,7 @@
 package com.example.yellow
 
+import android.Manifest
+import android.content.pm.PackageManager
 import android.os.Bundle
 import android.os.SystemClock
 import android.util.Log
@@ -9,6 +11,8 @@ import android.widget.EditText
 import android.widget.SeekBar
 import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import com.google.android.exoplayer2.ExoPlayer
@@ -27,11 +31,12 @@ import java.io.ByteArrayInputStream
 import java.net.HttpURLConnection
 import java.net.URL
 import java.net.URLEncoder
+import kotlin.math.log2
 import kotlin.math.pow
 
 class PianoFragment : Fragment(R.layout.fragment_piano) {
 
-    // ===== UI (fragment_piano.xml) =====
+    // ===== UI =====
     private lateinit var songQueryInput: EditText
     private lateinit var searchButton: Button
     private lateinit var currentSongText: TextView
@@ -51,19 +56,38 @@ class PianoFragment : Fragment(R.layout.fragment_piano) {
     private var currentMelodyUrl: String? = null
     private var currentSongTitle: String? = null
 
-    // 키: -12 ~ +12
     private var currentSemitones: Int = 0
 
     // ===== MIDI =====
     private var originalMidiNotes: List<MusicalNote> = emptyList()
+    private var fixedMinPitch: Int? = null
+    private var fixedMaxPitch: Int? = null
 
     private var searchJob: Job? = null
     private var positionLogJob: Job? = null
 
+    // ===== Voice detector =====
+    private var voiceDetector: VoicePitchDetector? = null
+
+    // ★★★★★ 핵심 수정: ExoPlayer는 메인 스레드 접근만 허용
+    // 따라서 메인에서 주기적으로 currentPosition을 캐시해두고,
+    // 백그라운드(VoicePitchDetector thread)에서는 이 값을 읽기만 한다.
+    @Volatile private var lastSafePlayerPositionMs: Long = 0L
+    private var positionSamplerJob: Job? = null
+
+    private val requestMicPermission = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (!granted) {
+            Toast.makeText(requireContext(), "마이크 권한이 필요합니다.", Toast.LENGTH_SHORT).show()
+        } else {
+            startVoiceDetectorIfNeeded()
+        }
+    }
+
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // bind
         songQueryInput = view.findViewById(R.id.songQueryInput)
         searchButton = view.findViewById(R.id.searchButton)
         currentSongText = view.findViewById(R.id.currentSongText)
@@ -78,12 +102,10 @@ class PianoFragment : Fragment(R.layout.fragment_piano) {
         pianoRollView = view.findViewById(R.id.piano_roll_view)
         pitchView = view.findViewById(R.id.pitch_view)
 
-        // init button state
         startButton.isEnabled = false
         stopButton.isEnabled = false
         stopSongButton.isEnabled = false
 
-        // key seekbar (-12..+12)
         keySeekBar.max = 24
         keySeekBar.progress = 12
         currentSemitones = 0
@@ -93,19 +115,13 @@ class PianoFragment : Fragment(R.layout.fragment_piano) {
             override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
                 currentSemitones = progress - 12
                 updateKeyText()
-
-                // 오디오 pitch 변경
                 updatePlayerPitch()
-
-                // MIDI도 transpose 반영
-                applyMidiTransposeToView()
+                applyMidiTransposeToView() // live 타일 유지(resetLivePitches=false)
             }
-
             override fun onStartTrackingTouch(seekBar: SeekBar?) = Unit
             override fun onStopTrackingTouch(seekBar: SeekBar?) = Unit
         })
 
-        // search
         searchButton.setOnClickListener {
             val q = songQueryInput.text?.toString()?.trim().orEmpty()
             if (q.isEmpty()) {
@@ -122,25 +138,103 @@ class PianoFragment : Fragment(R.layout.fragment_piano) {
                 Toast.makeText(requireContext(), "먼저 노래를 검색해 주세요.", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
+
+            ensureMicPermissionAndStartDetector()
+
             p.playWhenReady = true
             p.play()
             logPlayerSnapshot("after play()")
             startPositionLogger()
+
+            // ★ 캐시 업데이트 시작(메인 스레드)
+            startPositionSampler()
         }
 
         // pause
         stopButton.setOnClickListener {
             player?.pause()
             logPlayerSnapshot("after pause()")
+            // 필요 시 pause에서 detector stop 가능. (지금은 유지)
         }
 
-        // reset to start
+        // reset
         stopSongButton.setOnClickListener {
             val p = player ?: return@setOnClickListener
             p.pause()
             p.seekTo(0)
+            lastSafePlayerPositionMs = 0L
             logPlayerSnapshot("after reset()")
+
+            // 요구사항: 초기화 시 사용자 녹음표시 전부 삭제 + 0초부터 다시
+            pianoRollView?.clearLivePitches()
+            pitchView?.clearDetectedPitch()
         }
+    }
+
+    private fun ensureMicPermissionAndStartDetector() {
+        val granted = ContextCompat.checkSelfPermission(
+            requireContext(),
+            Manifest.permission.RECORD_AUDIO
+        ) == PackageManager.PERMISSION_GRANTED
+
+        if (granted) {
+            startVoiceDetectorIfNeeded()
+        } else {
+            requestMicPermission.launch(Manifest.permission.RECORD_AUDIO)
+        }
+    }
+
+    private fun startVoiceDetectorIfNeeded() {
+        if (voiceDetector != null) return
+
+        // ★ 메인 스레드에서 position 캐시를 꾸준히 갱신
+        startPositionSampler()
+
+        voiceDetector = VoicePitchDetector { hz, _ ->
+            // ★ 여기(백그라운드 스레드)에서 player 접근 금지!
+            val timeMs = lastSafePlayerPositionMs
+
+            val midi = if (hz > 0f) {
+                (69.0 + 12.0 * log2(hz.toDouble() / 440.0)).toFloat()
+            } else 0f
+
+            // UI 반영은 메인으로
+            viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
+                pitchView?.setDetectedPitch(midi)
+                pianoRollView?.addLivePitchAt(timeMs, midi)
+            }
+        }
+
+        voiceDetector?.start()
+        Log.d("PianoFragment", "VoicePitchDetector started")
+    }
+
+    private fun stopVoiceDetector() {
+        voiceDetector?.stop()
+        voiceDetector = null
+        Log.d("PianoFragment", "VoicePitchDetector stopped")
+    }
+
+    /**
+     * ★ ExoPlayer currentPosition을 "메인 스레드에서만" 읽어 캐시
+     * 50ms 정도면 충분히 촘촘하게 타일이 찍힘.
+     */
+    private fun startPositionSampler() {
+        if (positionSamplerJob != null) return
+        positionSamplerJob = viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
+            while (true) {
+                val p = player
+                if (p != null) {
+                    lastSafePlayerPositionMs = p.currentPosition
+                }
+                delay(50)
+            }
+        }
+    }
+
+    private fun stopPositionSampler() {
+        positionSamplerJob?.cancel()
+        positionSamplerJob = null
     }
 
     private fun updateKeyText() {
@@ -161,9 +255,15 @@ class PianoFragment : Fragment(R.layout.fragment_piano) {
         stopButton.isEnabled = false
         stopSongButton.isEnabled = false
 
-        // 새 검색 시 MIDI 초기화
         originalMidiNotes = emptyList()
+        fixedMinPitch = null
+        fixedMaxPitch = null
+
         pianoRollView?.setNotes(emptyList())
+        pianoRollView?.clearLivePitches()
+        pitchView?.clearDetectedPitch()
+
+        lastSafePlayerPositionMs = 0L
 
         searchJob = viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
             try {
@@ -202,7 +302,6 @@ class PianoFragment : Fragment(R.layout.fragment_piano) {
                     stopSongButton.isEnabled = true
                 }
 
-                // MIDI 다운로드/파싱
                 downloadAndApplyMidi(midiUrl)
 
             } catch (e: Exception) {
@@ -246,26 +345,23 @@ class PianoFragment : Fragment(R.layout.fragment_piano) {
                     "PianoFragment",
                     "state=${stateName(playbackState)} playWhenReady=${exoPlayer.playWhenReady} isPlaying=${exoPlayer.isPlaying} pos=${exoPlayer.currentPosition}"
                 )
+                // state 변할 때도 캐시 한번 갱신
+                lastSafePlayerPositionMs = exoPlayer.currentPosition
             }
 
             override fun onIsPlayingChanged(isPlaying: Boolean) {
                 Log.d("PianoFragment", "onIsPlayingChanged=$isPlaying pos=${exoPlayer.currentPosition}")
-            }
-
-            override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
-                Log.d("PianoFragment", "onPlayWhenReadyChanged=$playWhenReady reason=$reason")
+                lastSafePlayerPositionMs = exoPlayer.currentPosition
             }
         })
 
-        // media item + prepare
         exoPlayer.setMediaItem(MediaItem.fromUri(url))
-
-        // 현재 키(반음) 적용
         updatePlayerPitch()
 
         exoPlayer.prepare()
         exoPlayer.playWhenReady = false
 
+        lastSafePlayerPositionMs = 0L
         logPlayerSnapshot("after prepare()")
     }
 
@@ -289,10 +385,26 @@ class PianoFragment : Fragment(R.layout.fragment_piano) {
                 withContext(Dispatchers.Main) {
                     originalMidiNotes = notes
 
-                    // 현재 키를 반영해서 피아노롤 갱신
+                    if (originalMidiNotes.isNotEmpty()) {
+                        fixedMinPitch = (originalMidiNotes.minOf { it.note } - 4).coerceAtLeast(0)
+                        fixedMaxPitch = (originalMidiNotes.maxOf { it.note } + 4).coerceAtMost(83)
+                    } else {
+                        fixedMinPitch = null
+                        fixedMaxPitch = null
+                    }
+
                     applyMidiTransposeToView()
 
-                    Log.d("PianoFragment", "MIDI loaded. originalCount=${originalMidiNotes.size}")
+                    val fMin = fixedMinPitch
+                    val fMax = fixedMaxPitch
+                    if (fMin != null && fMax != null) {
+                        pitchView?.setPitchRange(fMin, fMax)
+                    }
+
+                    Log.d(
+                        "PianoFragment",
+                        "MIDI loaded. originalCount=${originalMidiNotes.size} fixedRange=${fixedMinPitch}-${fixedMaxPitch}"
+                    )
                 }
             } catch (e: Exception) {
                 Log.e("PianoFragment", "MIDI download/parse failed", e)
@@ -308,22 +420,23 @@ class PianoFragment : Fragment(R.layout.fragment_piano) {
         if (originalMidiNotes.isEmpty()) return
 
         val transposed = transposeNotes(originalMidiNotes, currentSemitones)
-        view.setNotes(transposed)
+
+        val fMin = fixedMinPitch
+        val fMax = fixedMaxPitch
+        if (fMin != null && fMax != null) {
+            view.setNotes(transposed, fMin, fMax, resetLivePitches = false)
+        } else {
+            view.setNotes(transposed)
+        }
 
         Log.d("PianoFragment", "Applied MIDI transpose semitones=$currentSemitones")
     }
 
     private fun transposeNotes(notes: List<MusicalNote>, semitones: Int): List<MusicalNote> {
         if (semitones == 0) return notes
-
         return notes.map { n ->
-            // MusicalNote의 "첫 번째 Int"가 음정(미디 노트 번호)임 (이름이 pitch든 note든 상관없음)
-            val (noteNumber, startTime, duration) = n
-
-            val newNoteNumber = (noteNumber + semitones).coerceIn(0, 127)
-
-            // copy()에 이름 붙이지 말고, 생성자로 재생성 (필드명 의존 제거)
-            MusicalNote(newNoteNumber, startTime, duration)
+            val newNoteNumber = (n.note + semitones).coerceIn(0, 127)
+            MusicalNote(newNoteNumber, n.startTime, n.duration)
         }
     }
 
@@ -339,6 +452,7 @@ class PianoFragment : Fragment(R.layout.fragment_piano) {
                     "PianoFragment",
                     "posLog t=${(now - startTs) / 1000}s state=${stateName(p.playbackState)} isPlaying=${p.isPlaying} pos=${p.currentPosition} vol=${p.volume}"
                 )
+                lastSafePlayerPositionMs = p.currentPosition
             }
         }
     }
@@ -349,6 +463,7 @@ class PianoFragment : Fragment(R.layout.fragment_piano) {
 
         player?.release()
         player = null
+        lastSafePlayerPositionMs = 0L
     }
 
     private fun httpGetText(url: String): String {
@@ -406,6 +521,7 @@ class PianoFragment : Fragment(R.layout.fragment_piano) {
             "PianoFragment",
             "[$tag] state=${stateName(p.playbackState)} playWhenReady=${p.playWhenReady} isPlaying=${p.isPlaying} vol=${p.volume} pos=${p.currentPosition} dur=${p.duration}"
         )
+        lastSafePlayerPositionMs = p.currentPosition
     }
 
     private fun stateName(state: Int): String = when (state) {
@@ -419,6 +535,8 @@ class PianoFragment : Fragment(R.layout.fragment_piano) {
     override fun onStop() {
         super.onStop()
         player?.pause()
+        stopVoiceDetector()
+        stopPositionSampler()
     }
 
     override fun onDestroyView() {
@@ -426,6 +544,8 @@ class PianoFragment : Fragment(R.layout.fragment_piano) {
         searchJob?.cancel()
         searchJob = null
 
+        stopVoiceDetector()
+        stopPositionSampler()
         releasePlayer()
 
         pianoRollView = null

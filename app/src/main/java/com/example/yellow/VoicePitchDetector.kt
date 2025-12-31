@@ -1,79 +1,73 @@
 package com.example.yellow
 
-import android.annotation.SuppressLint
-import android.media.AudioFormat
-import android.media.AudioRecord
-import android.media.MediaRecorder
-import kotlin.concurrent.thread
+import android.util.Log
+import be.tarsos.dsp.AudioDispatcher
+import be.tarsos.dsp.io.android.AudioDispatcherFactory
+import be.tarsos.dsp.pitch.PitchDetectionHandler
+import be.tarsos.dsp.pitch.PitchProcessor
+import java.util.concurrent.atomic.AtomicBoolean
 
-class VoicePitchDetector(private val onPitchDetected: (Float) -> Unit) {
+class VoicePitchDetector(
+    private val onPitch: (hz: Float, probability: Float) -> Unit
+) {
 
-    private var isRecording = false
-    private lateinit var audioRecord: AudioRecord
-    private val sampleRate = 44100
-    private val bufferSize = AudioRecord.getMinBufferSize(sampleRate, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT)
+    private var dispatcher: AudioDispatcher? = null
+    private var thread: Thread? = null
+    private val running = AtomicBoolean(false)
 
-    @SuppressLint("MissingPermission")
+    private val sampleRate = 22050
+    private val bufferSize = 1024
+    private val overlap = 0
+
     fun start() {
-        if (isRecording) return
+        if (running.getAndSet(true)) {
+            Log.d(TAG, "VoicePitchDetector already running")
+            return
+        }
 
-        audioRecord = AudioRecord(
-            MediaRecorder.AudioSource.MIC,
-            sampleRate,
-            AudioFormat.CHANNEL_IN_MONO,
-            AudioFormat.ENCODING_PCM_16BIT,
-            bufferSize
-        )
+        try {
+            // ✅ 당신 프로젝트의 TarsosDSP 버전에서는 3-인자만 지원
+            dispatcher = AudioDispatcherFactory.fromDefaultMicrophone(
+                sampleRate,
+                bufferSize,
+                overlap
+            )
 
-        isRecording = true
-        audioRecord.startRecording()
-
-        thread {
-            val buffer = ShortArray(bufferSize)
-            while (isRecording) {
-                val read = audioRecord.read(buffer, 0, bufferSize)
-                if (read > 0) {
-                    val pitch = findFundamentalFrequency(buffer)
-                    onPitchDetected(pitch)
-                }
+            val handler = PitchDetectionHandler { res, _ ->
+                onPitch(res.pitch, res.probability)
             }
+
+            val processor = PitchProcessor(
+                PitchProcessor.PitchEstimationAlgorithm.YIN,
+                sampleRate.toFloat(),
+                bufferSize,
+                handler
+            )
+
+            dispatcher?.addAudioProcessor(processor)
+
+            thread = Thread(dispatcher, "VoicePitchDetectorThread").apply { start() }
+            Log.d(TAG, "VoicePitchDetector started")
+        } catch (e: Exception) {
+            running.set(false)
+            Log.e(TAG, "Failed to start VoicePitchDetector", e)
+            stop()
         }
     }
 
     fun stop() {
-        if (!isRecording) return
-        isRecording = false
-        audioRecord.stop()
-        audioRecord.release()
+        if (!running.getAndSet(false)) return
+        try {
+            dispatcher?.stop()
+        } catch (_: Exception) {
+        } finally {
+            dispatcher = null
+            thread = null
+            Log.d(TAG, "VoicePitchDetector stopped")
+        }
     }
 
-    private fun findFundamentalFrequency(audioBuffer: ShortArray): Float {
-        // A simple auto-correlation based pitch detection
-        val n = audioBuffer.size
-        val autoCorrelation = IntArray(n)
-
-        for (lag in 0 until n) {
-            var sum = 0
-            for (i in 0 until n - lag) {
-                sum += audioBuffer[i] * audioBuffer[i + lag]
-            }
-            autoCorrelation[lag] = sum
-        }
-
-        var d = 0
-        while (d < n - 1 && autoCorrelation[d] > autoCorrelation[d + 1]) {
-            d++
-        }
-
-        var maxPeak = d
-        while (d < n - 1) {
-            if (autoCorrelation[d] > autoCorrelation[maxPeak] && autoCorrelation[d] > autoCorrelation[d - 1] && autoCorrelation[d] > autoCorrelation[d + 1]) {
-                maxPeak = d
-            }
-            d++
-        }
-
-        val T = maxPeak
-        return if (T > 0) sampleRate.toFloat() / T else 0f
+    companion object {
+        private const val TAG = "VoicePitchDetector"
     }
 }

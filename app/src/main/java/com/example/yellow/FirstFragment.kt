@@ -3,6 +3,7 @@ package com.example.yellow
 import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Bundle
+import android.os.SystemClock
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
@@ -25,6 +26,9 @@ class FirstFragment : Fragment() {
 
     private var dispatcher: AudioDispatcher? = null
     private val PERMISSION_REQUEST_CODE = 123
+
+    // 라이브 피치 타임라인 시작 기준(상대시간 0점)
+    private var liveStartElapsed: Long = 0L
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -72,15 +76,21 @@ class FirstFragment : Fragment() {
             Log.d("FirstFragment", "Pitch detection is already running.")
             return
         }
-        
+
+        // (중요) 라이브 타임라인을 0으로 재시작
+        liveStartElapsed = SystemClock.elapsedRealtime()
+        binding.pianoRollView.resetLiveTimelineBase(liveStartElapsed)
         binding.pianoRollView.clearLivePitches()
 
         dispatcher = AudioDispatcherFactory.fromDefaultMicrophone(22050, 1024, 0)
 
-        val pitchDetectionHandler = PitchDetectionHandler { res, e ->
+        val pitchDetectionHandler = PitchDetectionHandler { res, _ ->
             val pitchInHz = res.pitch
+
+            // UI 스레드에서 View 업데이트
             activity?.runOnUiThread {
                 if (pitchInHz > 0) {
+                    // PianoRollView 내부에서 "상대시간(ms)"로 변환해서 추가하도록 변경됨
                     binding.pianoRollView.addLivePitch(pitchInHz)
                 }
             }
@@ -100,14 +110,19 @@ class FirstFragment : Fragment() {
 
     private fun stopPitchDetection() {
         dispatcher?.stop()
+        dispatcher = null
         Log.d("FirstFragment", "Stopped pitch detection.")
     }
 
     private fun loadMidiFile(fileName: String) {
         try {
             val inputStream = requireContext().assets.open(fileName)
+
+            // 주의: 여기 MidiParser API는 당신 프로젝트 원형에 맞춰야 합니다.
+            // (현재 코드는 기존 구조를 유지)
             val midiParser = MidiParser()
             val notes = midiParser.parse(inputStream)
+
             binding.pianoRollView.setNotes(notes)
         } catch (e: IOException) {
             Log.e("FirstFragment", "Failed to load MIDI file: $fileName", e)
