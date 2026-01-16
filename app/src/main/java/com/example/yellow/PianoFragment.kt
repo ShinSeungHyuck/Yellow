@@ -2,6 +2,7 @@ package com.example.yellow
 
 import android.Manifest
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Bundle
 import android.os.SystemClock
 import android.util.Log
@@ -27,6 +28,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.json.JSONArray
 import org.json.JSONObject
 import java.io.ByteArrayInputStream
 import java.io.File
@@ -36,6 +38,8 @@ import java.net.URL
 import java.net.URLEncoder
 import kotlin.math.log2
 import kotlin.math.pow
+import kotlin.math.max
+import kotlin.math.min
 
 class PianoFragment : Fragment(R.layout.fragment_piano) {
 
@@ -52,6 +56,13 @@ class PianoFragment : Fragment(R.layout.fragment_piano) {
 
         // ExoPlayer currentPosition 캐시 주기
         private const val POSITION_SAMPLE_MS = 50L
+
+        // 가사 업데이트 주기
+        private const val LYRICS_TICK_MS = 120L
+
+        // 레이아웃에 가사 TextView를 넣을 때 사용할 id 이름(문자열)
+        // XML에 @+id/lyricsText 로 추가하면 자동 연결됨
+        private const val LYRICS_VIEW_ID_NAME = "lyricsText"
     }
 
     // ===== UI =====
@@ -65,6 +76,14 @@ class PianoFragment : Fragment(R.layout.fragment_piano) {
     private lateinit var startButton: Button
     private lateinit var stopButton: Button
     private lateinit var stopSongButton: Button
+
+    private lateinit var btnSeekMinus30: Button
+    private lateinit var btnSeekMinus10: Button
+    private lateinit var btnSeekPlus10: Button
+    private lateinit var btnSeekPlus30: Button
+
+    // 가사 표시 (레이아웃에 없으면 null로 유지 — 컴파일/런타임 안전)
+    private var lyricsTextView: TextView? = null
 
     private var pianoRollView: PianoRollView? = null
     private var pitchView: PitchView? = null
@@ -80,7 +99,6 @@ class PianoFragment : Fragment(R.layout.fragment_piano) {
     private var originalMidiNotes: List<MusicalNote> = emptyList()
     private var fixedMinPitch: Int? = null
     private var fixedMaxPitch: Int? = null
-
     private var isMidiEarlyStart: Boolean = false
 
     // 최종 확정된 MIDI 딜레이(ms) — “검색 확정 단계”에서 결정됨
@@ -95,6 +113,12 @@ class PianoFragment : Fragment(R.layout.fragment_piano) {
     // ExoPlayer 메인 스레드 currentPosition 캐시
     @Volatile private var lastSafePlayerPositionMs: Long = 0L
     private var positionSamplerJob: Job? = null
+
+    // ===== Lyrics (LRCLIB) =====
+    private data class LrcLine(val timeMs: Long, val text: String)
+
+    private var lrcLines: List<LrcLine> = emptyList()
+    private var lyricsJob: Job? = null
 
     private val requestMicPermission = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -123,6 +147,25 @@ class PianoFragment : Fragment(R.layout.fragment_piano) {
         pianoRollView = view.findViewById(R.id.piano_roll_view)
         pitchView = view.findViewById(R.id.pitch_view)
 
+        btnSeekMinus30 = view.findViewById(R.id.btn_seek_minus_30)
+        btnSeekMinus10 = view.findViewById(R.id.btn_seek_minus_10)
+        btnSeekPlus10 = view.findViewById(R.id.btn_seek_plus_10)
+        btnSeekPlus30 = view.findViewById(R.id.btn_seek_plus_30)
+
+        // ===== 핵심: lyricsText를 R.id로 직접 참조하지 않고, 있으면 연결 =====
+        lyricsTextView = findOptionalTextViewByName(view, LYRICS_VIEW_ID_NAME)
+
+        // 기본은 비활성(곡 로드 전)
+        btnSeekMinus30.isEnabled = false
+        btnSeekMinus10.isEnabled = false
+        btnSeekPlus10.isEnabled = false
+        btnSeekPlus30.isEnabled = false
+
+        btnSeekMinus30.setOnClickListener { seekAndResetLive(-30_000L) }
+        btnSeekMinus10.setOnClickListener { seekAndResetLive(-10_000L) }
+        btnSeekPlus10.setOnClickListener  { seekAndResetLive(+10_000L) }
+        btnSeekPlus30.setOnClickListener  { seekAndResetLive(+30_000L) }
+
         startButton.isEnabled = false
         stopButton.isEnabled = false
         stopSongButton.isEnabled = false
@@ -146,9 +189,10 @@ class PianoFragment : Fragment(R.layout.fragment_piano) {
         searchButton.setOnClickListener {
             val q = songQueryInput.text?.toString()?.trim().orEmpty()
             if (q.isEmpty()) {
-                Toast.makeText(requireContext(), "검색어를 입력하세요.", Toast.LENGTH_SHORT).show()
+                Toast.makeText(requireContext(), "검색어(제목)를 입력하세요.", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
+            // 이제 입력은 "제목"만. 예) "밤편지"
             searchAndLoad(q)
         }
 
@@ -160,7 +204,6 @@ class PianoFragment : Fragment(R.layout.fragment_piano) {
                 return@setOnClickListener
             }
 
-            // 딜레이는 이미 검색 단계에서 확정되어 있음
             ensureMicPermissionAndStartDetector()
 
             p.playWhenReady = true
@@ -168,6 +211,7 @@ class PianoFragment : Fragment(R.layout.fragment_piano) {
 
             startPositionSampler()
             startPositionLogger()
+            startLyricsUpdater()
         }
 
         // pause
@@ -184,18 +228,30 @@ class PianoFragment : Fragment(R.layout.fragment_piano) {
 
             pianoRollView?.clearLivePitches()
             pitchView?.clearDetectedPitch()
+
+            renderLyricsAtPlayerPos(0L)
         }
     }
 
-    // ===== 핵심: 검색/확정 단계에서 MIDI 딜레이 확정 =====
-    private fun searchAndLoad(query: String) {
+    // ===== 검색/확정 단계에서 MIDI 딜레이 + 가사 로드까지 확정 =====
+    private fun searchAndLoad(queryTitleOnly: String) {
         searchJob?.cancel()
         searchJob = null
+
+        lyricsJob?.cancel()
+        lyricsJob = null
+        lrcLines = emptyList()
+        lyricsTextView?.text = ""
 
         searchButton.isEnabled = false
         startButton.isEnabled = false
         stopButton.isEnabled = false
         stopSongButton.isEnabled = false
+
+        btnSeekMinus30.isEnabled = false
+        btnSeekMinus10.isEnabled = false
+        btnSeekPlus10.isEnabled = false
+        btnSeekPlus30.isEnabled = false
 
         originalMidiNotes = emptyList()
         fixedMinPitch = null
@@ -211,7 +267,7 @@ class PianoFragment : Fragment(R.layout.fragment_piano) {
 
         searchJob = viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
             try {
-                val encoded = URLEncoder.encode(query, "UTF-8")
+                val encoded = URLEncoder.encode(queryTitleOnly, "UTF-8")
 
                 val melodySearchUrl =
                     "https://r2-music-search.den1116.workers.dev/search?bucket=melody&q=$encoded"
@@ -231,8 +287,6 @@ class PianoFragment : Fragment(R.layout.fragment_piano) {
                     return@launch
                 }
 
-                // 1) MP3 onset 판정(0~4초 내 확실한 음 시작?)과
-                // 2) MIDI 파싱(첫 타일 3초 내 시작?)을 병렬로 수행
                 val mp3OnsetDeferred = async(Dispatchers.IO) {
                     detectMp3OnsetWithinWindowWithDetector(melodyUrl, MP3_ONSET_WINDOW_SEC)
                 }
@@ -240,30 +294,31 @@ class PianoFragment : Fragment(R.layout.fragment_piano) {
                 val midiNotes = downloadAndParseMidi(midiUrl)
                 val mp3HasOnsetIn4s = mp3OnsetDeferred.await()
 
-                // MIDI early-start 계산
                 val midiEarly = if (midiNotes.isNotEmpty()) {
                     val firstStartMs = midiNotes.minOf { it.startTime }
                     firstStartMs <= (MIDI_EARLY_START_SEC * 1000).toLong()
                 } else false
 
-                // 규칙에 따라 “검색 단계에서” 딜레이 확정
                 val decidedDelaySec = decideMidiDelaySeconds(
                     mp3HasOnsetIn4s = mp3HasOnsetIn4s,
                     midiEarlyStart = midiEarly
                 )
+                val decidedDelayMs = (decidedDelaySec * 1000).toLong()
+
+                // ===== LRCLIB 가사 로드: 제목만 검색 + 유사도 최고 항목 선택 =====
+                val lrcText = fetchSyncedLyricsFromLrclibBestTitleMatch(queryTitleOnly)
+                val parsedLrc = parseLrc(lrcText)
 
                 withContext(Dispatchers.Main) {
                     currentMelodyUrl = melodyUrl
-                    currentSongTitle = melodyKey ?: query
+                    currentSongTitle = melodyKey ?: queryTitleOnly
                     currentSongText.text = "현재 곡: ${currentSongTitle ?: "없음"}"
 
-                    // ExoPlayer 준비는 유지(사용자 재생 대기)
                     preparePlayer(melodyUrl)
 
-                    // MIDI 상태 저장 + 범위 계산
                     originalMidiNotes = midiNotes
                     isMidiEarlyStart = midiEarly
-                    midiDelayMs = (decidedDelaySec * 1000).toLong()
+                    midiDelayMs = decidedDelayMs
 
                     if (originalMidiNotes.isNotEmpty()) {
                         fixedMinPitch = (originalMidiNotes.minOf { it.note } - 4).coerceAtLeast(0)
@@ -273,7 +328,6 @@ class PianoFragment : Fragment(R.layout.fragment_piano) {
                         fixedMaxPitch = null
                     }
 
-                    // MIDI를 “확정된 딜레이”로 즉시 반영
                     applyMidiTransposeAndDelayToView(resetLive = true)
 
                     fixedMinPitch?.let { fMin ->
@@ -282,14 +336,23 @@ class PianoFragment : Fragment(R.layout.fragment_piano) {
                         }
                     }
 
+                    // 가사 저장 + 전주(0초)부터 3줄 표시
+                    lrcLines = parsedLrc
+                    renderLyricsAtPlayerPos(0L)
+
                     Log.e(
                         TAG,
-                        "Delay decided at search stage. mp3OnsetIn4s=$mp3HasOnsetIn4s midiEarly=$midiEarly delaySec=$decidedDelaySec"
+                        "Delay decided. mp3OnsetIn4s=$mp3HasOnsetIn4s midiEarly=$midiEarly delaySec=$decidedDelaySec lrcLines=${lrcLines.size}"
                     )
 
                     startButton.isEnabled = true
                     stopButton.isEnabled = true
                     stopSongButton.isEnabled = true
+
+                    btnSeekMinus30.isEnabled = true
+                    btnSeekMinus10.isEnabled = true
+                    btnSeekPlus10.isEnabled = true
+                    btnSeekPlus30.isEnabled = true
                 }
 
             } catch (e: Exception) {
@@ -304,10 +367,10 @@ class PianoFragment : Fragment(R.layout.fragment_piano) {
     }
 
     /**
-     * 조건(요청하신 최종 버전):
-     * 1) mp3 확실한 음이 4초 안에 시작되지 않으면 -> 4초
-     * 2) (1) 아니고, midi 첫 타일이 3초 안이면 -> 2.5초
-     * 3) 그 외 -> 1초
+     * 조건:
+     * 1) mp3 확실한 음이 4초 안에 시작되지 않으면 -> RULE1
+     * 2) (1) 아니고, midi 첫 타일이 3초 안이면 -> RULE2
+     * 3) 그 외 -> RULE3
      */
     private fun decideMidiDelaySeconds(mp3HasOnsetIn4s: Boolean, midiEarlyStart: Boolean): Double {
         return if (!mp3HasOnsetIn4s) {
@@ -317,8 +380,26 @@ class PianoFragment : Fragment(R.layout.fragment_piano) {
         }
     }
 
-    // ===== Voice detector =====
+    // ===== Seek buttons: 시점 이동 + 라이브 피치 초기화 =====
+    private fun seekAndResetLive(deltaMs: Long) {
+        val p = player ?: return
 
+        val duration = p.duration
+        val cur = p.currentPosition
+        var newPos = cur + deltaMs
+        if (newPos < 0) newPos = 0
+        if (duration > 0 && newPos > duration) newPos = duration
+
+        p.seekTo(newPos)
+        lastSafePlayerPositionMs = newPos
+
+        pianoRollView?.clearLivePitches()
+        pitchView?.clearDetectedPitch()
+
+        renderLyricsAtPlayerPos(newPos)
+    }
+
+    // ===== Voice detector =====
     private fun ensureMicPermissionAndStartDetector() {
         val granted = ContextCompat.checkSelfPermission(
             requireContext(),
@@ -333,7 +414,6 @@ class PianoFragment : Fragment(R.layout.fragment_piano) {
         if (voiceDetector != null) return
         startPositionSampler()
 
-        // 사용자가 겪었던 컴파일 에러(3-파라미터 기대) 기준으로 맞춤
         voiceDetector = VoicePitchDetector { hz: Float, _: Float, _: Float ->
             val timeMs = lastSafePlayerPositionMs
             val midi = if (hz > 0f) {
@@ -370,7 +450,6 @@ class PianoFragment : Fragment(R.layout.fragment_piano) {
     }
 
     // ===== Player =====
-
     private fun preparePlayer(url: String) {
         releasePlayer()
 
@@ -391,9 +470,11 @@ class PianoFragment : Fragment(R.layout.fragment_piano) {
                 Log.e(TAG, "ExoPlayer error: ${error.errorCodeName}", error)
                 Toast.makeText(requireContext(), "오디오 재생 오류: ${error.errorCodeName}", Toast.LENGTH_SHORT).show()
             }
+
             override fun onPlaybackStateChanged(playbackState: Int) {
                 lastSafePlayerPositionMs = exoPlayer.currentPosition
             }
+
             override fun onIsPlayingChanged(isPlaying: Boolean) {
                 lastSafePlayerPositionMs = exoPlayer.currentPosition
             }
@@ -415,7 +496,6 @@ class PianoFragment : Fragment(R.layout.fragment_piano) {
     }
 
     // ===== MIDI apply =====
-
     private fun applyMidiTransposeAndDelayToView(resetLive: Boolean) {
         val view = pianoRollView ?: return
         if (originalMidiNotes.isEmpty()) return
@@ -448,7 +528,6 @@ class PianoFragment : Fragment(R.layout.fragment_piano) {
     }
 
     // ===== Logger =====
-
     private fun startPositionLogger() {
         positionLogJob?.cancel()
         val p = player ?: return
@@ -466,19 +545,83 @@ class PianoFragment : Fragment(R.layout.fragment_piano) {
     private fun releasePlayer() {
         positionLogJob?.cancel()
         positionLogJob = null
+
+        lyricsJob?.cancel()
+        lyricsJob = null
+
         player?.release()
         player = null
         lastSafePlayerPositionMs = 0L
     }
 
-    // ===== Network utils =====
+    // ===== Lyrics updater =====
+    private fun startLyricsUpdater() {
+        if (lyricsJob != null) return
+        val tv = lyricsTextView ?: return
+        if (lrcLines.isEmpty()) {
+            tv.text = ""
+            return
+        }
 
+        lyricsJob = viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
+            while (true) {
+                val pos = player?.currentPosition ?: lastSafePlayerPositionMs
+                renderLyricsAtPlayerPos(pos)
+                delay(LYRICS_TICK_MS)
+            }
+        }
+    }
+
+    /**
+     * - 가사 전환 시간도 midiDelayMs 만큼 "미뤄짐"
+     * - 전주(0초)부터 가사 3줄 표시
+     * - 전환은 다음 가사 timestamp에 맞춰(조기 전환 X)
+     */
+    private fun renderLyricsAtPlayerPos(playerPosMs: Long) {
+        val tv = lyricsTextView ?: return
+        if (lrcLines.isEmpty()) {
+            tv.text = ""
+            return
+        }
+
+        // 가사 타임라인을 MIDI/마이크 비교와 동일한 룰 딜레이로 지연
+        val base = playerPosMs - midiDelayMs
+
+        val idx = when {
+            base < lrcLines[0].timeMs -> 0
+            else -> {
+                var lo = 0
+                var hi = lrcLines.lastIndex
+                while (lo <= hi) {
+                    val mid = (lo + hi) ushr 1
+                    if (lrcLines[mid].timeMs <= base) lo = mid + 1 else hi = mid - 1
+                }
+                hi.coerceIn(0, lrcLines.lastIndex)
+            }
+        }
+
+        val l1 = lrcLines.getOrNull(idx)?.text.orEmpty()
+        val l2 = lrcLines.getOrNull(idx + 1)?.text.orEmpty()
+        val l3 = lrcLines.getOrNull(idx + 2)?.text.orEmpty()
+
+        tv.text = buildString {
+            append(l1)
+            append('\n')
+            append(l2)
+            append('\n')
+            append(l3)
+        }
+    }
+
+    // ===== Network utils =====
     private fun httpGetText(url: String): String {
         val conn = URL(url).openConnection() as HttpURLConnection
         conn.requestMethod = "GET"
         conn.connectTimeout = 15_000
         conn.readTimeout = 15_000
         conn.instanceFollowRedirects = true
+        conn.setRequestProperty("Accept", "application/json")
+
         try {
             val code = conn.responseCode
             val stream = if (code in 200..299) conn.inputStream else conn.errorStream
@@ -518,7 +661,6 @@ class PianoFragment : Fragment(R.layout.fragment_piano) {
     }
 
     // ===== MIDI download/parse =====
-
     private fun downloadAndParseMidi(midiUrl: String): List<MusicalNote> {
         val bytes = httpGetBytes(midiUrl)
         val inputStream = ByteArrayInputStream(bytes)
@@ -527,39 +669,213 @@ class PianoFragment : Fragment(R.layout.fragment_piano) {
     }
 
     // ===== MP3 onset detection (Mp3OnsetDetectorV3 사용) =====
-
-    /**
-     * MP3 파일을 다운로드 후,
-     * Mp3OnsetDetectorV3로 0~windowSec 구간에서 "확실한(tonal) onset" 존재 여부를 판정.
-     *
-     * - "큰 잡음이어도 무음으로" 처리하기 위해 V3의 noiseLike 게이트를 사용.
-     * - 분석 실패 시 UX 보호를 위해 보수적으로 true 반환(=Rule1(4초)을 강제로 걸지 않음).
-     *   만약 실패도 무음으로 처리하고 싶으면 catch에서 false로 바꾸면 됩니다.
-     */
     private fun detectMp3OnsetWithinWindowWithDetector(mp3Url: String, windowSec: Double): Boolean {
         val tmp = File.createTempFile("melody_", ".mp3", requireContext().cacheDir)
         try {
             val bytes = httpGetBytes(mp3Url)
             FileOutputStream(tmp).use { it.write(bytes) }
 
-            // 호출/결과 로그를 강제로 남김(필터 상관없이 보이게)
             Log.e(TAG, "CALLING Mp3OnsetDetectorV3 windowSec=$windowSec tmp=${tmp.absolutePath}")
 
             Mp3OnsetDetectorV3.ANALYZE_SEC = windowSec
             Mp3OnsetDetectorV3.DEBUG = true
 
-            val result = Mp3OnsetDetectorV3.analyze(requireContext(), android.net.Uri.fromFile(tmp))
+            val result = Mp3OnsetDetectorV3.analyze(requireContext(), Uri.fromFile(tmp))
             Log.e(TAG, "Mp3OnsetDetectorV3 result=$result")
 
             return result.hasOnset
         } catch (e: Exception) {
             Log.e(TAG, "detectMp3OnsetWithinWindowWithDetector failed", e)
-            // 분석 실패 시 Rule1(4초)로 UX가 망가지는 걸 피하려면 true(기존 코드 정책)
             return true
-            // 실패도 무음(=onset 없음)으로 처리하고 싶으면 return false 로 바꾸세요.
         } finally {
             runCatching { tmp.delete() }
         }
+    }
+
+    // ===== LRCLIB: 제목만 검색 + 유사도 최고 선택 =====
+
+    /**
+     * LRCLIB에서 track_name(제목)만으로 검색하고,
+     * 결과 중 "입력 제목과 가장 유사한 track title"을 선택해서 syncedLyrics를 가져옵니다.
+     */
+    private fun fetchSyncedLyricsFromLrclibBestTitleMatch(inputTitle: String): String {
+        val title = inputTitle.trim()
+        if (title.isBlank()) return ""
+
+        val titleEnc = URLEncoder.encode(title, "UTF-8")
+        val searchUrl = "https://lrclib.net/api/search?track_name=$titleEnc"
+
+        return try {
+            val body = httpGetText(searchUrl)
+            val arr = JSONArray(body)
+            if (arr.length() <= 0) return ""
+
+            val bestObj = pickBestMatchByTitle(arr, title)
+            if (bestObj == null) return ""
+
+            val directSynced = bestObj.optString("syncedLyrics", "")
+            if (directSynced.isNotBlank()) return directSynced
+
+            val id = bestObj.optLong("id", -1L)
+            if (id > 0) {
+                val getUrl = "https://lrclib.net/api/get?id=$id"
+                val getBody = httpGetText(getUrl)
+                val obj = JSONObject(getBody)
+                obj.optString("syncedLyrics", "")
+            } else {
+                ""
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "LRCLIB fetch failed title=$title", e)
+            ""
+        }
+    }
+
+    /**
+     * JSONArray 결과에서 track title을 뽑아 "정규화 + Levenshtein 유사도"가 가장 높은 항목을 고릅니다.
+     * - 동점이면 더 짧은 거리(=더 가까움) 우선
+     */
+    private fun pickBestMatchByTitle(arr: JSONArray, inputTitle: String): JSONObject? {
+        val normInput = normalizeTitle(inputTitle)
+        var best: JSONObject? = null
+        var bestScore = -1.0
+        var bestDist = Int.MAX_VALUE
+
+        for (i in 0 until arr.length()) {
+            val obj = arr.optJSONObject(i) ?: continue
+            val candTitle = optStringAny(obj, "trackName", "track_name", "track", "title", "name")
+            if (candTitle.isBlank()) continue
+
+            val normCand = normalizeTitle(candTitle)
+            val (score, dist) = titleSimilarity(normInput, normCand)
+
+            if (score > bestScore || (score == bestScore && dist < bestDist)) {
+                bestScore = score
+                bestDist = dist
+                best = obj
+            }
+        }
+
+        best?.let {
+            val chosenTitle = optStringAny(it, "trackName", "track_name", "track", "title", "name")
+            val chosenArtist = optStringAny(it, "artistName", "artist_name", "artist")
+            Log.d(TAG, "LRCLIB best match title='$chosenTitle' artist='$chosenArtist' score=$bestScore dist=$bestDist")
+        }
+        return best
+    }
+
+    /**
+     * 문자열 정규화:
+     * - 공백/구두점/특수문자 제거
+     * - 소문자화
+     */
+    private fun normalizeTitle(s: String): String {
+        val lower = s.lowercase()
+        // 한글/영문/숫자만 남김 (공백/특수문자 제거)
+        return lower.replace(Regex("[^0-9a-z가-힣]+"), "")
+    }
+
+    /**
+     * 유사도(0~1) + 거리 반환
+     * - score = 1 - dist/maxLen
+     */
+    private fun titleSimilarity(normA: String, normB: String): Pair<Double, Int> {
+        if (normA.isEmpty() && normB.isEmpty()) return 1.0 to 0
+        if (normA.isEmpty() || normB.isEmpty()) return 0.0 to max(normA.length, normB.length)
+
+        val dist = levenshteinDistance(normA, normB)
+        val maxLen = max(normA.length, normB.length).coerceAtLeast(1)
+        val score = 1.0 - (dist.toDouble() / maxLen.toDouble())
+        return score to dist
+    }
+
+    /**
+     * Levenshtein 거리 (O(n*m), 짧은 제목 문자열엔 충분히 빠름)
+     */
+    private fun levenshteinDistance(a: String, b: String): Int {
+        val n = a.length
+        val m = b.length
+        if (n == 0) return m
+        if (m == 0) return n
+
+        var prev = IntArray(m + 1) { it }
+        var cur = IntArray(m + 1)
+
+        for (i in 1..n) {
+            cur[0] = i
+            val ca = a[i - 1]
+            for (j in 1..m) {
+                val cb = b[j - 1]
+                val cost = if (ca == cb) 0 else 1
+                cur[j] = min(
+                    min(cur[j - 1] + 1, prev[j] + 1),
+                    prev[j - 1] + cost
+                )
+            }
+            val tmp = prev
+            prev = cur
+            cur = tmp
+        }
+        return prev[m]
+    }
+
+    private fun optStringAny(obj: JSONObject, vararg keys: String): String {
+        for (k in keys) {
+            val v = obj.optString(k, "")
+            if (v.isNotBlank()) return v
+        }
+        return ""
+    }
+
+    /**
+     * LRC 파서:
+     * - [mm:ss.xx] 또는 [mm:ss] 형태 지원
+     * - 여러 타임태그가 한 줄에 있는 경우 처리
+     */
+    private fun parseLrc(lrc: String): List<LrcLine> {
+        if (lrc.isBlank()) return emptyList()
+
+        val lines = mutableListOf<LrcLine>()
+        val regex = Regex("\\[(\\d{1,2}):(\\d{2})(?:\\.(\\d{1,3}))?]")
+
+        lrc.lineSequence().forEach { raw ->
+            val line = raw.trim()
+            if (line.isEmpty()) return@forEach
+
+            val matches = regex.findAll(line).toList()
+            if (matches.isEmpty()) return@forEach
+
+            val text = line.replace(regex, "").trim()
+            if (text.isEmpty()) return@forEach
+
+            for (m in matches) {
+                val mm = m.groupValues[1].toLongOrNull() ?: continue
+                val ss = m.groupValues[2].toLongOrNull() ?: continue
+                val fracStr = m.groupValues[3]
+                val ms = when {
+                    fracStr.isBlank() -> 0L
+                    fracStr.length == 1 -> (fracStr.toLongOrNull() ?: 0L) * 100L
+                    fracStr.length == 2 -> (fracStr.toLongOrNull() ?: 0L) * 10L
+                    else -> (fracStr.take(3).toLongOrNull() ?: 0L)
+                }
+
+                val timeMs = (mm * 60_000L) + (ss * 1000L) + ms
+                lines.add(LrcLine(timeMs, text))
+            }
+        }
+
+        return lines.sortedBy { it.timeMs }
+    }
+
+    // ===== Optional View Finder (중요: R.id로 직접 참조하지 않음) =====
+    private fun findOptionalTextViewByName(root: View, idName: String): TextView? {
+        val ctx = root.context
+        val id = ctx.resources.getIdentifier(idName, "id", ctx.packageName)
+        if (id == 0) {
+            Log.w(TAG, "Optional TextView id not found in resources: $idName (skip lyrics UI)")
+            return null
+        }
+        return root.findViewById(id)
     }
 
     private fun updateKeyText() {
@@ -583,11 +899,15 @@ class PianoFragment : Fragment(R.layout.fragment_piano) {
         searchJob?.cancel()
         searchJob = null
 
+        lyricsJob?.cancel()
+        lyricsJob = null
+
         stopVoiceDetector()
         stopPositionSampler()
         releasePlayer()
 
         pianoRollView = null
         pitchView = null
+        lyricsTextView = null
     }
 }

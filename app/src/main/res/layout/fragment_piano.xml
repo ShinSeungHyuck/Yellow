@@ -41,12 +41,24 @@
         android:layout_weight="1"
         android:orientation="vertical">
 
+        <!-- 가사 표시 -->
+        <TextView
+            android:id="@+id/lyricsText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingTop="5dp"
+            android:paddingBottom="5dp"
+            android:text=""
+            android:textSize="12sp"
+            android:textStyle="bold"
+            android:maxLines="3" />
+
         <!-- 곡 검색 영역 -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-            android:padding="8dp">
+            android:padding="2dp">
 
             <EditText
                 android:id="@+id/songQueryInput"
@@ -72,7 +84,7 @@
             android:paddingStart="8dp"
             android:paddingEnd="8dp"
             android:text="현재 곡: 없음"
-            android:textSize="14sp"
+            android:textSize="8sp"
             android:textStyle="bold" />
 
         <!-- 키(반음) 조절 영역 -->
@@ -81,15 +93,16 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="8dp">
+            android:padding="4dp">
 
             <!-- 현재 키 표시 -->
             <TextView
                 android:id="@+id/key_offset_text"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:paddingStart="12dp"
                 android:text="Key: 0 (원조)"
-                android:textSize="16sp" />
+                android:textSize="12sp" />
 
             <!-- 키 조절 SeekBar -->
             <SeekBar
@@ -131,8 +144,8 @@
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:gravity="center"
-            android:paddingTop="4dp"
-            android:paddingBottom="8dp">
+            android:paddingTop="2dp"
+            android:paddingBottom="0dp">
 
             <Button
                 android:id="@+id/start_button"
@@ -157,7 +170,43 @@
                 android:layout_weight="1"
                 android:text="초기화" />
         </LinearLayout>
+        <LinearLayout
+            android:id="@+id/seek_control_row"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center"
+            android:layout_marginTop="0dp">
 
+            <Button
+                android:id="@+id/btn_seek_minus_30"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="-30초" />
+
+            <Button
+                android:id="@+id/btn_seek_minus_10"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="4dp"
+                android:text="-10초" />
+
+            <Button
+                android:id="@+id/btn_seek_plus_10"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="4dp"
+                android:text="+10초" />
+
+            <Button
+                android:id="@+id/btn_seek_plus_30"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="4dp"
+                android:text="+30초" />
+        </LinearLayout>
     </LinearLayout>
+
+
 
 </LinearLayout>
