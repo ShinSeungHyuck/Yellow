@@ -1,5 +1,7 @@
 <resources>
     <string name="app_name">Yellow</string>
+
+    <!-- (선택) 템플릿 잔재 대비 -->
     <string name="title_home">Home</string>
     <string name="title_dashboard">Dashboard</string>
     <string name="title_notifications">Notifications</string>

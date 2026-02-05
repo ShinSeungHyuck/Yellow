@@ -1,212 +1,177 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools"
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
-    tools:context=".PianoFragment">
+    android:padding="12dp">
 
-    <!-- 상단: 피아노 롤 + 피치 뷰 (화면 상단 1/2) -->
+    <!-- 상단바: 뒤로 + 제목 + 즐겨찾기 -->
     <LinearLayout
-        android:id="@+id/piano_roll_container"
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
-        android:orientation="horizontal">
+        android:id="@+id/practice_topbar"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
 
-        <com.example.yellow.PitchView
-            android:id="@+id/pitch_view"
-            android:layout_width="wrap_content"
-            android:layout_height="match_parent" />
+        <ImageButton
+            android:id="@+id/btn_back"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="뒤로"
+            android:src="@android:drawable/ic_media_previous"/>
 
-        <HorizontalScrollView
-            android:id="@+id/piano_roll_scroll_view"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent">
+        <TextView
+            android:id="@+id/title_text"
+            android:layout_width="0dp"
+            android:layout_height="40dp"
+            android:layout_weight="1"
+            android:gravity="center_vertical"
+            android:paddingStart="8dp"
+            android:text="Practice"
+            android:textStyle="bold"
+            android:textSize="16sp"/>
 
-            <com.example.yellow.PianoRollView
-                android:id="@+id/piano_roll_view"
-                android:layout_width="wrap_content"
-                android:layout_height="match_parent" />
-
-        </HorizontalScrollView>
-
+        <ImageButton
+            android:id="@+id/btn_favorite"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="즐겨찾기"
+            android:src="@drawable/ic_star_outline"/>
     </LinearLayout>
 
-    <!-- 하단 전체 (검색 + 키 변경 + 3버튼) : 화면 하단 1/2 -->
-    <LinearLayout
-        android:id="@+id/bottom_container"
-        android:layout_width="match_parent"
+    <ProgressBar
+        android:id="@+id/loadingProgress"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:visibility="gone"
+        app:layout_constraintTop_toBottomOf="@id/practice_topbar"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"/>
+
+    <!-- Pitch + PianoRoll -->
+    <com.example.yellow.PitchView
+        android:id="@+id/pitch_view"
+        android:layout_width="72dp"
         android:layout_height="0dp"
-        android:layout_weight="1"
-        android:orientation="vertical">
+        app:layout_constraintTop_toBottomOf="@id/practice_topbar"
+        app:layout_constraintBottom_toTopOf="@id/lyricsText"
+        app:layout_constraintStart_toStartOf="parent"/>
 
-        <!-- 가사 표시 -->
+    <HorizontalScrollView
+        android:id="@+id/scroll_piano"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:fillViewport="true"
+        app:layout_constraintTop_toBottomOf="@id/practice_topbar"
+        app:layout_constraintBottom_toTopOf="@id/lyricsText"
+        app:layout_constraintStart_toEndOf="@id/pitch_view"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <com.example.yellow.PianoRollView
+            android:id="@+id/piano_roll_view"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"/>
+    </HorizontalScrollView>
+
+    <!-- Lyrics -->
+    <TextView
+        android:id="@+id/lyricsText"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:paddingTop="8dp"
+        android:paddingBottom="8dp"
+        android:textSize="14sp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintBottom_toTopOf="@id/controls_container"/>
+
+    <!-- Controls -->
+    <LinearLayout
+        android:id="@+id/controls_container"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
         <TextView
-            android:id="@+id/lyricsText"
-            android:layout_width="match_parent"
+            android:id="@+id/key_offset_text"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:paddingTop="5dp"
-            android:paddingBottom="5dp"
-            android:text=""
-            android:textSize="12sp"
-            android:textStyle="bold"
-            android:maxLines="3" />
+            android:text="Key: 0 (원조)"/>
 
-        <!-- 곡 검색 영역 -->
+        <SeekBar
+            android:id="@+id/keySeekBar"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"/>
+
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:padding="2dp">
+            android:orientation="horizontal">
 
-            <EditText
-                android:id="@+id/songQueryInput"
+            <Button
+                android:id="@+id/btn_seek_minus_30"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:hint="곡 제목 / 가수 검색"
-                android:singleLine="true" />
+                android:text="-30"/>
 
             <Button
-                android:id="@+id/searchButton"
-                android:layout_width="wrap_content"
+                android:id="@+id/btn_seek_minus_10"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="8dp"
-                android:text="검색" />
+                android:layout_weight="1"
+                android:text="-10"/>
+
+            <Button
+                android:id="@+id/btn_seek_plus_10"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="+10"/>
+
+            <Button
+                android:id="@+id/btn_seek_plus_30"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="+30"/>
         </LinearLayout>
 
-        <!-- 현재 곡 제목 표시 -->
-        <TextView
-            android:id="@+id/currentSongText"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:paddingStart="8dp"
-            android:paddingEnd="8dp"
-            android:text="현재 곡: 없음"
-            android:textSize="8sp"
-            android:textStyle="bold" />
-
-        <!-- 키(반음) 조절 영역 -->
         <LinearLayout
-            android:id="@+id/key_control_container"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:padding="4dp">
-
-            <!-- 현재 키 표시 -->
-            <TextView
-                android:id="@+id/key_offset_text"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:paddingStart="12dp"
-                android:text="Key: 0 (원조)"
-                android:textSize="12sp" />
-
-            <!-- 키 조절 SeekBar -->
-            <SeekBar
-                android:id="@+id/keySeekBar"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:max="24"
-                android:progress="12" />
-
-            <!-- resetButton: 코드 호환용 스텁 (UI에는 안 보임) -->
-            <Button
-                android:id="@+id/resetButton"
-                android:layout_width="0dp"
-                android:layout_height="0dp"
-                android:visibility="gone"
-                android:text="키 초기화" />
-
-            <!-- key_down / key_up 도 여전히 숨김 상태로 유지 (코드 호환용) -->
-            <Button
-                android:id="@+id/key_down_button"
-                android:layout_width="0dp"
-                android:layout_height="0dp"
-                android:visibility="gone"
-                android:text="-반음" />
-
-            <Button
-                android:id="@+id/key_up_button"
-                android:layout_width="0dp"
-                android:layout_height="0dp"
-                android:visibility="gone"
-                android:text="+반음" />
-
-        </LinearLayout>
-
-        <!-- 하단: 통합 재생 컨트롤 3개 (재생 / 정지 / 초기화) -->
-        <LinearLayout
-            android:id="@+id/playback_control_container"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center"
-            android:paddingTop="2dp"
-            android:paddingBottom="0dp">
+            android:orientation="horizontal">
 
             <Button
                 android:id="@+id/start_button"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="재생" />
+                android:text="Play"/>
 
             <Button
                 android:id="@+id/stop_button"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="8dp"
                 android:layout_weight="1"
-                android:text="정지" />
+                android:text="Pause"/>
 
             <Button
                 android:id="@+id/stop_song_button"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="8dp"
                 android:layout_weight="1"
-                android:text="초기화" />
+                android:text="Reset"/>
         </LinearLayout>
-        <LinearLayout
-            android:id="@+id/seek_control_row"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center"
-            android:layout_marginTop="0dp">
 
-            <Button
-                android:id="@+id/btn_seek_minus_30"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="-30초" />
-
-            <Button
-                android:id="@+id/btn_seek_minus_10"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="4dp"
-                android:text="-10초" />
-
-            <Button
-                android:id="@+id/btn_seek_plus_10"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="4dp"
-                android:text="+10초" />
-
-            <Button
-                android:id="@+id/btn_seek_plus_30"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="4dp"
-                android:text="+30초" />
-        </LinearLayout>
     </LinearLayout>
 
-
-
-</LinearLayout>
+</androidx.constraintlayout.widget.ConstraintLayout>

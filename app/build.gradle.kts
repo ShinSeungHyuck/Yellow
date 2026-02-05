@@ -58,4 +58,7 @@ dependencies {
     implementation("io.ktor:ktor-client-android:3.2.1")
     implementation("io.ktor:ktor-client-core:3.2.1")
     implementation("io.ktor:ktor-utils:3.2.1")
+
+    implementation("androidx.recyclerview:recyclerview:1.3.2")
+    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.7.0")
 }
