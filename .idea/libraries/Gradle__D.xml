@@ -1,0 +1,11 @@
+<component name="libraryTable">
+  <library name="Gradle: D" external-system-id="GRADLE">
+    <CLASSES>
+      <root url="jar://$USER_HOME$/.gradle/caches/8.13/transforms/639b3523f77101daa7eb92e7e039966c/transformed/jetified-TarsosDSPKit-release/jars/classes.jar!/" />
+      <root url="file://$USER_HOME$/.gradle/caches/8.13/transforms/639b3523f77101daa7eb92e7e039966c/transformed/jetified-TarsosDSPKit-release/AndroidManifest.xml" />
+      <root url="jar://$USER_HOME$/.gradle/caches/8.13/transforms/639b3523f77101daa7eb92e7e039966c/transformed/jetified-TarsosDSPKit-release/jars/libs/TarsosDSP-Android-2.4.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>

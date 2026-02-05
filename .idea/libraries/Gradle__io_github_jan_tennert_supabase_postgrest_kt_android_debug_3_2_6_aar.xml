@@ -1,0 +1,12 @@
+<component name="libraryTable">
+  <library name="Gradle: io.github.jan-tennert.supabase:postgrest-kt-android-debug:3.2.6@aar" external-system-id="GRADLE">
+    <CLASSES>
+      <root url="file://$USER_HOME$/.gradle/caches/8.13/transforms/1cef4d5c8c31ddf9ebc0145ac96e50e4/transformed/jetified-postgrest-kt-debug/AndroidManifest.xml" />
+      <root url="jar://$USER_HOME$/.gradle/caches/8.13/transforms/1cef4d5c8c31ddf9ebc0145ac96e50e4/transformed/jetified-postgrest-kt-debug/jars/classes.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES>
+      <root url="jar://$USER_HOME$/.gradle/caches/modules-2/files-2.1/io.github.jan-tennert.supabase/postgrest-kt-android-debug/3.2.6/d098993ddfd9d5254803f7f7d701711da13f880a/postgrest-kt-android-debug-3.2.6-sources.jar!/" />
+    </SOURCES>
+  </library>
+</component>

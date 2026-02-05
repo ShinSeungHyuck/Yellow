@@ -1,0 +1,12 @@
+<component name="libraryTable">
+  <library name="Gradle: com.russhwolf:multiplatform-settings-coroutines-android-debug:1.3.0@aar" external-system-id="GRADLE">
+    <CLASSES>
+      <root url="jar://$USER_HOME$/.gradle/caches/8.13/transforms/4885f9ebae85f4dc035a52b8150d85a2/transformed/jetified-multiplatform-settings-coroutines-debug/jars/classes.jar!/" />
+      <root url="file://$USER_HOME$/.gradle/caches/8.13/transforms/4885f9ebae85f4dc035a52b8150d85a2/transformed/jetified-multiplatform-settings-coroutines-debug/AndroidManifest.xml" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES>
+      <root url="jar://$USER_HOME$/.gradle/caches/modules-2/files-2.1/com.russhwolf/multiplatform-settings-coroutines-android-debug/1.3.0/baa9a6106c322834c76401424600e2630bbeeb3d/multiplatform-settings-coroutines-android-debug-1.3.0-sources.jar!/" />
+    </SOURCES>
+  </library>
+</component>

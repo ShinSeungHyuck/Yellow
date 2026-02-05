@@ -1,0 +1,12 @@
+<component name="libraryTable">
+  <library name="Gradle: io.ktor:ktor-client-android-jvm:3.2.1" type="java-imported" external-system-id="GRADLE">
+    <properties groupId="io.ktor" artifactId="ktor-client-android-jvm" version="3.2.1" baseVersion="3.2.1" />
+    <CLASSES>
+      <root url="jar://$USER_HOME$/.gradle/caches/modules-2/files-2.1/io.ktor/ktor-client-android-jvm/3.2.1/b181bb565f76616a267a89fb742327695c05432/ktor-client-android-jvm-3.2.1.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES>
+      <root url="jar://$USER_HOME$/.gradle/caches/modules-2/files-2.1/io.ktor/ktor-client-android-jvm/3.2.1/eae9783b0fe0565b64c26cdab7afc80c3d96f37d/ktor-client-android-jvm-3.2.1-sources.jar!/" />
+    </SOURCES>
+  </library>
+</component>
