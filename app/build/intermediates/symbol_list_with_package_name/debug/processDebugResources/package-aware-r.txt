@@ -3607,6 +3607,7 @@ id invisible
 id inward
 id is_pooling_container_tag
 id italic
+id item_key_badge
 id item_star
 id item_subtitle
 id item_title

@@ -138,7 +138,12 @@ class PianoFragment : Fragment(R.layout.fragment_piano) {
 
         favBtn.setOnClickListener {
             currentSong?.let { s ->
-                val now = FavoritesStore.toggle(requireContext(), s)
+                // ✅ 즐겨찾기 추가할 때 현재 keyOffset을 같이 저장
+                val now = FavoritesStore.toggle(
+                    requireContext(),
+                    s,
+                    keyOffsetWhenAdd = currentSemitones
+                )
                 updateFavoriteIcon(now)
             }
         }
@@ -160,8 +165,17 @@ class PianoFragment : Fragment(R.layout.fragment_piano) {
                 updatePlayerPitch()
                 applyMidiTransposeAndDelayToView(resetLive = false)
             }
+
             override fun onStartTrackingTouch(seekBar: SeekBar?) = Unit
-            override fun onStopTrackingTouch(seekBar: SeekBar?) = Unit
+
+            override fun onStopTrackingTouch(seekBar: SeekBar?) {
+                // ✅ 즐겨찾기 곡이면 keyOffset 저장(슬라이더 놓는 순간)
+                currentSong?.let { s ->
+                    if (FavoritesStore.isFavorite(requireContext(), s.id)) {
+                        FavoritesStore.setKeyOffset(requireContext(), s.id, currentSemitones)
+                    }
+                }
+            }
         })
 
         startButton.setOnClickListener {
@@ -207,7 +221,15 @@ class PianoFragment : Fragment(R.layout.fragment_piano) {
         currentSong = Song(id, title, melodyUrl, midiUrl, if (queryTitle.isBlank()) title else queryTitle)
         titleText.text = title
 
-        updateFavoriteIcon(FavoritesStore.isFavorite(requireContext(), id))
+        // ✅ 즐겨찾기면 저장된 keyOffset 적용
+        val isFav = FavoritesStore.isFavorite(requireContext(), id)
+        updateFavoriteIcon(isFav)
+        if (isFav) {
+            val savedKey = FavoritesStore.getKeyOffset(requireContext(), id)
+            currentSemitones = savedKey
+            keySeekBar.progress = savedKey + 12
+            updateKeyText()
+        }
 
         loadSong(currentSong!!)
     }
@@ -296,6 +318,10 @@ class PianoFragment : Fragment(R.layout.fragment_piano) {
                             pitchView?.setPitchRange(fMin, fMax)
                         }
                     }
+
+                    // ✅ 즐겨찾기면 키 오프셋을 플레이어/뷰에 재적용
+                    updatePlayerPitch()
+                    applyMidiTransposeAndDelayToView(resetLive = true)
 
                     lrcLines = parsedLrc
                     renderLyricsAtPlayerPos(0L)

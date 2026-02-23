@@ -32,20 +32,12 @@
         "source": "C:\\Users\\PrdSup\\.gradle\\daemon\\8.13\\com.example.yellow.app-main-54:\\drawable\\ic_nav_settings.xml"
     },
     {
-        "merged": "com.example.yellow.app-debug-52:/menu_bottom_nav_menu.xml.flat",
-        "source": "com.example.yellow.app-main-54:/menu/bottom_nav_menu.xml"
-    },
-    {
         "merged": "C:\\Users\\PrdSup\\.gradle\\daemon\\8.13\\com.example.yellow.app-debug-52:\\drawable_ic_nav_library.xml.flat",
         "source": "C:\\Users\\PrdSup\\.gradle\\daemon\\8.13\\com.example.yellow.app-main-54:\\drawable\\ic_nav_library.xml"
     },
     {
         "merged": "C:\\Users\\PrdSup\\.gradle\\daemon\\8.13\\com.example.yellow.app-debug-52:\\drawable_ic_home_black_24dp.xml.flat",
         "source": "C:\\Users\\PrdSup\\.gradle\\daemon\\8.13\\com.example.yellow.app-main-54:\\drawable\\ic_home_black_24dp.xml"
-    },
-    {
-        "merged": "com.example.yellow.app-debug-52:/layout_fragment_search.xml.flat",
-        "source": "com.example.yellow.app-main-54:/layout/fragment_search.xml"
     },
     {
         "merged": "C:\\Users\\PrdSup\\.gradle\\daemon\\8.13\\com.example.yellow.app-debug-52:\\mipmap-anydpi-v26_ic_launcher_round.xml.flat",
@@ -92,10 +84,6 @@
         "source": "C:\\Users\\PrdSup\\.gradle\\daemon\\8.13\\com.example.yellow.app-main-54:\\layout\\fragment_piano.xml"
     },
     {
-        "merged": "com.example.yellow.app-debug-52:/navigation_nav_graph.xml.flat",
-        "source": "com.example.yellow.app-main-54:/navigation/nav_graph.xml"
-    },
-    {
         "merged": "C:\\Users\\PrdSup\\.gradle\\daemon\\8.13\\com.example.yellow.app-debug-52:\\drawable_ic_dashboard_black_24dp.xml.flat",
         "source": "C:\\Users\\PrdSup\\.gradle\\daemon\\8.13\\com.example.yellow.app-main-54:\\drawable\\ic_dashboard_black_24dp.xml"
     },
@@ -112,16 +100,12 @@
         "source": "C:\\Users\\PrdSup\\.gradle\\daemon\\8.13\\com.example.yellow.app-main-54:\\xml\\data_extraction_rules.xml"
     },
     {
-        "merged": "com.example.yellow.app-debug-52:/layout_fragment_settings.xml.flat",
-        "source": "com.example.yellow.app-main-54:/layout/fragment_settings.xml"
+        "merged": "C:\\Users\\PrdSup\\.gradle\\daemon\\8.13\\com.example.yellow.app-debug-52:\\layout_fragment_settings.xml.flat",
+        "source": "C:\\Users\\PrdSup\\.gradle\\daemon\\8.13\\com.example.yellow.app-main-54:\\layout\\fragment_settings.xml"
     },
     {
         "merged": "C:\\Users\\PrdSup\\.gradle\\daemon\\8.13\\com.example.yellow.app-debug-52:\\mipmap-hdpi_ic_launcher.webp.flat",
         "source": "C:\\Users\\PrdSup\\.gradle\\daemon\\8.13\\com.example.yellow.app-main-54:\\mipmap-hdpi\\ic_launcher.webp"
-    },
-    {
-        "merged": "C:\\Users\\PrdSup\\.gradle\\daemon\\8.13\\com.example.yellow.app-debug-52:\\layout_fragment_settings.xml.flat",
-        "source": "C:\\Users\\PrdSup\\.gradle\\daemon\\8.13\\com.example.yellow.app-main-54:\\layout\\fragment_settings.xml"
     },
     {
         "merged": "C:\\Users\\PrdSup\\.gradle\\daemon\\8.13\\com.example.yellow.app-debug-52:\\drawable_ic_app_logo_placeholder.xml.flat",
@@ -138,10 +122,6 @@
     {
         "merged": "C:\\Users\\PrdSup\\.gradle\\daemon\\8.13\\com.example.yellow.app-debug-52:\\menu_bottom_nav_menu.xml.flat",
         "source": "C:\\Users\\PrdSup\\.gradle\\daemon\\8.13\\com.example.yellow.app-main-54:\\menu\\bottom_nav_menu.xml"
-    },
-    {
-        "merged": "com.example.yellow.app-debug-52:/layout_fragment_library.xml.flat",
-        "source": "com.example.yellow.app-main-54:/layout/fragment_library.xml"
     },
     {
         "merged": "C:\\Users\\PrdSup\\.gradle\\daemon\\8.13\\com.example.yellow.app-debug-52:\\mipmap-mdpi_ic_launcher.webp.flat",
@@ -164,16 +144,16 @@
         "source": "C:\\Users\\PrdSup\\.gradle\\daemon\\8.13\\com.example.yellow.app-main-54:\\drawable\\ic_notifications_black_24dp.xml"
     },
     {
-        "merged": "C:\\Users\\PrdSup\\.gradle\\daemon\\8.13\\com.example.yellow.app-debug-52:\\layout_fragment_dashboard.xml.flat",
-        "source": "C:\\Users\\PrdSup\\.gradle\\daemon\\8.13\\com.example.yellow.app-main-54:\\layout\\fragment_dashboard.xml"
-    },
-    {
         "merged": "C:\\Users\\PrdSup\\.gradle\\daemon\\8.13\\com.example.yellow.app-debug-52:\\layout_item_song.xml.flat",
         "source": "C:\\Users\\PrdSup\\.gradle\\daemon\\8.13\\com.example.yellow.app-main-54:\\layout\\item_song.xml"
     },
     {
         "merged": "C:\\Users\\PrdSup\\.gradle\\daemon\\8.13\\com.example.yellow.app-debug-52:\\layout_fragment_library.xml.flat",
         "source": "C:\\Users\\PrdSup\\.gradle\\daemon\\8.13\\com.example.yellow.app-main-54:\\layout\\fragment_library.xml"
+    },
+    {
+        "merged": "C:\\Users\\PrdSup\\.gradle\\daemon\\8.13\\com.example.yellow.app-debug-52:\\layout_fragment_dashboard.xml.flat",
+        "source": "C:\\Users\\PrdSup\\.gradle\\daemon\\8.13\\com.example.yellow.app-main-54:\\layout\\fragment_dashboard.xml"
     },
     {
         "merged": "C:\\Users\\PrdSup\\.gradle\\daemon\\8.13\\com.example.yellow.app-debug-52:\\navigation_nav_graph.xml.flat",

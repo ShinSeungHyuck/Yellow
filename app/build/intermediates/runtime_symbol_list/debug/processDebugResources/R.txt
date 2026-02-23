@@ -3606,6 +3606,7 @@ int id invisible 0x7f0a0133
 int id inward 0x7f0a0134
 int id is_pooling_container_tag 0x7f0a0135
 int id italic 0x7f0a0136
+int id item_key_badge 0x7f0a027f
 int id item_star 0x7f0a0137
 int id item_subtitle 0x7f0a0138
 int id item_title 0x7f0a0139

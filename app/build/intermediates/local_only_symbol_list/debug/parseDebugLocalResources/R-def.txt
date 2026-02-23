@@ -40,6 +40,7 @@ id button_stop
 id controls_container
 id editQuery
 id horizontalScrollView
+id item_key_badge
 id item_star
 id item_subtitle
 id item_title

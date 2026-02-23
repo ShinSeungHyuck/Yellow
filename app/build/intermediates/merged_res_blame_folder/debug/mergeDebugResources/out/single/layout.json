@@ -28,10 +28,6 @@
         "source": "C:\\Users\\PrdSup\\.gradle\\daemon\\8.13\\com.example.yellow.app-main-54:\\layout\\fragment_first.xml"
     },
     {
-        "merged": "com.example.yellow.app-mergeDebugResources-51:/layout/fragment_settings.xml",
-        "source": "com.example.yellow.app-main-54:/layout/fragment_settings.xml"
-    },
-    {
         "merged": "C:\\Users\\PrdSup\\.gradle\\daemon\\8.13\\com.example.yellow.app-mergeDebugResources-51:\\layout\\fragment_notifications.xml",
         "source": "C:\\Users\\PrdSup\\.gradle\\daemon\\8.13\\com.example.yellow.app-main-54:\\layout\\fragment_notifications.xml"
     },
@@ -40,23 +36,15 @@
         "source": "com.example.yellow.app-main-54:/layout/item_song.xml"
     },
     {
-        "merged": "com.example.yellow.app-mergeDebugResources-51:/layout/fragment_library.xml",
-        "source": "com.example.yellow.app-main-54:/layout/fragment_library.xml"
+        "merged": "C:\\Users\\PrdSup\\.gradle\\daemon\\8.13\\com.example.yellow.app-mergeDebugResources-51:\\layout\\fragment_settings.xml",
+        "source": "C:\\Users\\PrdSup\\.gradle\\daemon\\8.13\\com.example.yellow.app-main-54:\\layout\\fragment_settings.xml"
     },
     {
         "merged": "C:\\Users\\PrdSup\\.gradle\\daemon\\8.13\\com.example.yellow.app-mergeDebugResources-51:\\layout\\fragment_dashboard.xml",
         "source": "C:\\Users\\PrdSup\\.gradle\\daemon\\8.13\\com.example.yellow.app-main-54:\\layout\\fragment_dashboard.xml"
     },
     {
-        "merged": "C:\\Users\\PrdSup\\.gradle\\daemon\\8.13\\com.example.yellow.app-mergeDebugResources-51:\\layout\\fragment_settings.xml",
-        "source": "C:\\Users\\PrdSup\\.gradle\\daemon\\8.13\\com.example.yellow.app-main-54:\\layout\\fragment_settings.xml"
-    },
-    {
         "merged": "C:\\Users\\PrdSup\\.gradle\\daemon\\8.13\\com.example.yellow.app-mergeDebugResources-51:\\layout\\activity_splash.xml",
         "source": "C:\\Users\\PrdSup\\.gradle\\daemon\\8.13\\com.example.yellow.app-main-54:\\layout\\activity_splash.xml"
-    },
-    {
-        "merged": "com.example.yellow.app-mergeDebugResources-51:/layout/fragment_search.xml",
-        "source": "com.example.yellow.app-main-54:/layout/fragment_search.xml"
     }
 ]

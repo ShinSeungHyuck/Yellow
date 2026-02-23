@@ -21,6 +21,9 @@ public final class ItemSongBinding implements ViewBinding {
   private final ConstraintLayout rootView;
 
   @NonNull
+  public final TextView itemKeyBadge;
+
+  @NonNull
   public final ImageButton itemStar;
 
   @NonNull
@@ -29,9 +32,10 @@ public final class ItemSongBinding implements ViewBinding {
   @NonNull
   public final TextView itemTitle;
 
-  private ItemSongBinding(@NonNull ConstraintLayout rootView, @NonNull ImageButton itemStar,
-      @NonNull TextView itemSubtitle, @NonNull TextView itemTitle) {
+  private ItemSongBinding(@NonNull ConstraintLayout rootView, @NonNull TextView itemKeyBadge,
+      @NonNull ImageButton itemStar, @NonNull TextView itemSubtitle, @NonNull TextView itemTitle) {
     this.rootView = rootView;
+    this.itemKeyBadge = itemKeyBadge;
     this.itemStar = itemStar;
     this.itemSubtitle = itemSubtitle;
     this.itemTitle = itemTitle;
@@ -64,6 +68,12 @@ public final class ItemSongBinding implements ViewBinding {
     // This is done to optimize the compiled bytecode for size and performance.
     int id;
     missingId: {
+      id = R.id.item_key_badge;
+      TextView itemKeyBadge = ViewBindings.findChildViewById(rootView, id);
+      if (itemKeyBadge == null) {
+        break missingId;
+      }
+
       id = R.id.item_star;
       ImageButton itemStar = ViewBindings.findChildViewById(rootView, id);
       if (itemStar == null) {
@@ -82,7 +92,8 @@ public final class ItemSongBinding implements ViewBinding {
         break missingId;
       }
 
-      return new ItemSongBinding((ConstraintLayout) rootView, itemStar, itemSubtitle, itemTitle);
+      return new ItemSongBinding((ConstraintLayout) rootView, itemKeyBadge, itemStar, itemSubtitle,
+          itemTitle);
     }
     String missingId = rootView.getResources().getResourceName(id);
     throw new NullPointerException("Missing required view with ID: ".concat(missingId));
