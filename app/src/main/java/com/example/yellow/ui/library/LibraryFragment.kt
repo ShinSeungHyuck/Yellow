@@ -59,11 +59,11 @@ class LibraryFragment : Fragment() {
 
         val items = entries.map { e ->
             val s = e.song
-            val (mainTitle, artist) = splitTitleArtist(s.queryTitle.ifBlank { s.title })
+            // 표시 이름은 항상 실제 곡 이름(title) 사용, queryTitle은 가사 검색용으로만 유지
+            val (mainTitle, artist) = splitTitleArtist(s.title)
 
             val displaySong = s.copy(
-                title = mainTitle,
-                queryTitle = s.queryTitle.ifBlank { s.title }
+                title = mainTitle
             )
 
             SongAdapter.Item(
