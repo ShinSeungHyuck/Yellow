@@ -42,7 +42,7 @@ class PianoFragment : Fragment(R.layout.fragment_piano) {
         private const val MIDI_EARLY_START_SEC = 3.0
 
         // 자동 시간밀기(건드리지 않음)
-        private const val MIDI_DELAY_RULE1_SEC = 4.7
+        private const val MIDI_DELAY_RULE1_SEC = 4.15
         private const val MIDI_DELAY_RULE2_SEC = 2.7
         private const val MIDI_DELAY_RULE3_SEC = 0.8
 
