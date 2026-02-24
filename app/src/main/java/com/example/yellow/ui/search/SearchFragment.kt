@@ -64,21 +64,20 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         adapter = SongAdapter(
             onClick = { item -> openPiano(item.song) },
             onToggleFavorite = { item ->
-                val nowFav = FavoritesStore.toggle(requireContext(), item.song)
-                adapter.updateFavorite(item.song.id, nowFav)
+                // 리스트에서 즐겨찾기 추가할 땐 keyOffset은 0으로 저장(연습 화면에서 바꾸면 저장됨)
+                val nowFav = FavoritesStore.toggle(requireContext(), item.song, keyOffsetWhenAdd = 0)
+                val key = if (nowFav) FavoritesStore.getKeyOffset(requireContext(), item.song.id) else 0
+                adapter.updateFavorite(item.song.id, nowFav, keyOffset = key)
             }
         )
 
         recycler.layoutManager = LinearLayoutManager(requireContext())
         recycler.adapter = adapter
 
-        // 1) 화면 들어오면 "전체목록" 먼저 로드해서 보여주기
         loadCatalog()
 
-        // 2) 검색 버튼
         btnSearch.setOnClickListener { doSearch() }
 
-        // 3) 키보드 검색 버튼
         editQuery.setOnEditorActionListener { _, actionId, _ ->
             if (actionId == EditorInfo.IME_ACTION_SEARCH) {
                 doSearch()
@@ -86,13 +85,35 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
             } else false
         }
 
-        // 4) 검색어 비우면 자동으로 전체목록으로 복귀
         editQuery.addTextChangedListener { text ->
             val q = text?.toString()?.trim().orEmpty()
             if (q.isEmpty() && mode == Mode.SEARCH) {
                 showCatalog()
             }
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // Practice에서 keyOffset 저장 후 돌아오면 배지 갱신 필요
+        refreshBadgesOnly()
+    }
+
+    private fun loadFavoriteMap(): Map<String, Int> {
+        return FavoritesStore.getAllEntries(requireContext())
+            .associate { it.song.id to it.keyOffset }
+    }
+
+    private fun refreshBadgesOnly() {
+        if (!this::adapter.isInitialized) return
+        val favMap = loadFavoriteMap()
+        val updated = adapter.currentList.map { item ->
+            item.copy(
+                isFavorite = favMap.containsKey(item.song.id),
+                keyOffset = favMap[item.song.id] ?: 0
+            )
+        }
+        adapter.submit(updated)
     }
 
     private fun loadCatalog() {
@@ -105,8 +126,6 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
                 }
 
                 val items = catalogRepo.fetchCatalog(CATALOG_LIMIT)
-
-                // title: "곡명 - 가수" 형태면 subtitle로 가수 표시
                 val songs = items.map { it.toSong() }
 
                 withContext(Dispatchers.Main) {
@@ -128,10 +147,9 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
 
     private fun SongCatalogRepository.CatalogItem.toSong(): Song {
         val id = Song.makeId(melodyUrl, midiUrl)
-        // queryTitle은 가사 검색에 쓰이니까 "곡명 - 가수" 전체를 넣는게 유리
         return Song(
             id = id,
-            title = title,          // 리스트에도 그대로 표시
+            title = title,
             melodyUrl = melodyUrl,
             midiUrl = midiUrl,
             queryTitle = title
@@ -151,10 +169,9 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
 
         txtEmpty.visibility = View.GONE
 
-        // ✅ 여기서 5개를 랜덤으로 뽑음
         val preview = catalogSongs.shuffled().take(CATALOG_PREVIEW_COUNT)
 
-        val favSet = FavoritesStore.getAll(requireContext()).map { it.id }.toSet()
+        val favMap = loadFavoriteMap()
 
         val adapterItems = preview.map { s ->
             val (mainTitle, artist) = splitTitleArtist(s.title)
@@ -162,7 +179,8 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
             SongAdapter.Item(
                 song = displaySong,
                 subtitle = artist,
-                isFavorite = favSet.contains(s.id)
+                isFavorite = favMap.containsKey(s.id),
+                keyOffset = favMap[s.id] ?: 0
             )
         }
 
@@ -185,17 +203,18 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
                     txtEmpty.visibility = View.GONE
                 }
 
-                val results = searchRepo.search(q) // List<Candidate(song, score)>
-                val favSet = FavoritesStore.getAll(requireContext()).map { it.id }.toSet()
+                val results = searchRepo.search(q)
+                val favMap = loadFavoriteMap()
 
                 val adapterItems = results.map { c ->
                     val fullTitle = c.song.title
                     val (mainTitle, artist) = splitTitleArtist(fullTitle)
-                    val displaySong = c.song.copy(title = mainTitle) // 리스트에선 제목만 크게
+                    val displaySong = c.song.copy(title = mainTitle)
                     SongAdapter.Item(
                         song = displaySong,
                         subtitle = artist,
-                        isFavorite = favSet.contains(c.song.id)
+                        isFavorite = favMap.containsKey(c.song.id),
+                        keyOffset = favMap[c.song.id] ?: 0
                     )
                 }
 
@@ -231,7 +250,6 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
             "queryTitle" to song.queryTitle
         )
 
-        // SearchFragment가 libraryFragment로도 재사용될 수 있으니 안전하게 분기
         val actionId = when (destId) {
             R.id.libraryFragment -> R.id.action_libraryFragment_to_pianoFragment
             else -> R.id.action_searchFragment_to_pianoFragment
@@ -241,7 +259,6 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
     }
 
     private fun splitTitleArtist(full: String): Pair<String, String?> {
-        // "곡명 - 가수" 패턴만 처리
         val parts = full.split(" - ", limit = 2)
         return if (parts.size == 2) {
             parts[0].trim() to parts[1].trim()

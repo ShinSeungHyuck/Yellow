@@ -55,12 +55,36 @@ class LibraryFragment : Fragment() {
     }
 
     private fun loadFavorites() {
-        val fav = FavoritesStore.getAll(requireContext())
-        val items = fav.map {
-            SongAdapter.Item(song = it, subtitle = it.queryTitle.takeIf { qt -> qt != it.title }, isFavorite = true)
+        val entries = FavoritesStore.getAllEntries(requireContext())
+
+        val items = entries.map { e ->
+            val s = e.song
+            val (mainTitle, artist) = splitTitleArtist(s.queryTitle.ifBlank { s.title })
+
+            val displaySong = s.copy(
+                title = mainTitle,
+                queryTitle = s.queryTitle.ifBlank { s.title }
+            )
+
+            SongAdapter.Item(
+                song = displaySong,
+                subtitle = artist,
+                isFavorite = true,
+                keyOffset = e.keyOffset
+            )
         }
+
         adapter.submit(items)
         binding.txtEmpty.isVisible = items.isEmpty()
+    }
+
+    private fun splitTitleArtist(full: String): Pair<String, String?> {
+        val parts = full.split(" - ", limit = 2)
+        return if (parts.size == 2) {
+            parts[0].trim() to parts[1].trim()
+        } else {
+            full to null
+        }
     }
 
     override fun onDestroyView() {
