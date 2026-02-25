@@ -7,4 +7,16 @@
     <color name="teal_700">#FF018786</color>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
+
+    <!-- 다크 퍼플-블루 그라데이션 팔레트 -->
+    <color name="bg_top">#1A1830</color>
+    <color name="bg_bottom">#2A1F5C</color>
+    <color name="surface_card">#2E2560</color>
+    <color name="surface_elevated">#352B6E</color>
+    <color name="accent_purple">#7B52AB</color>
+    <color name="accent_purple_light">#9B72CB</color>
+    <color name="accent_purple_dark">#5A3A8A</color>
+    <color name="text_primary">#FFFFFF</color>
+    <color name="text_secondary">#B0ACC8</color>
+    <color name="border_subtle">#4A3A80</color>
 </resources>

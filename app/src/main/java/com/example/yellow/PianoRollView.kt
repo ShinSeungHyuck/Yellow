@@ -20,12 +20,14 @@ class PianoRollView(context: Context, attrs: AttributeSet?) : View(context, attr
     private val textPaint = Paint()
     private val livePitchPaint = Paint()
 
-    private val noteColors = listOf(
-        Color.parseColor("#FF5733"), Color.parseColor("#33FF57"), Color.parseColor("#3357FF"),
-        Color.parseColor("#FFFF33"), Color.parseColor("#FF33FF"), Color.parseColor("#33FFFF"),
-        Color.parseColor("#FFC300"), Color.parseColor("#DAF7A6"), Color.parseColor("#C70039"),
-        Color.parseColor("#900C3F"), Color.parseColor("#581845"), Color.parseColor("#A569BD")
-    )
+    private val noteGrayColor = Color.parseColor("#9E9E9E")
+
+    // 음표 이름 배열 (MIDI 음번호 → 이름 변환)
+    private val noteNames = arrayOf("C","C#","D","D#","E","F","F#","G","G#","A","A#","B")
+    private fun midiToNoteName(midi: Int): String {
+        val octave = (midi / 12) - 1
+        return noteNames[midi % 12] + octave
+    }
 
     var minPitch = 48
         private set
@@ -50,11 +52,11 @@ class PianoRollView(context: Context, attrs: AttributeSet?) : View(context, attr
         gridPaint.color = Color.LTGRAY
         gridPaint.strokeWidth = 1f
 
-        textPaint.color = Color.DKGRAY
+        textPaint.color = Color.parseColor("#B0ACC8")
         textPaint.textSize = 28f
         textPaint.isAntiAlias = true
 
-        livePitchPaint.color = Color.BLUE
+        livePitchPaint.color = Color.parseColor("#00E5FF")
         livePitchPaint.style = Paint.Style.FILL
 
         notePaint.style = Paint.Style.FILL
@@ -176,25 +178,20 @@ class PianoRollView(context: Context, attrs: AttributeSet?) : View(context, attr
 
     private fun drawGridAndLabels(canvas: Canvas) {
         val viewHeight = height - timeAxisHeight
-        val pitchRange = maxPitch - minPitch
 
+        // 시간 레이블만 표시 (격자선 없음)
         val firstSecond = (clipBounds.left / pixelsPerSecond).toInt().coerceAtLeast(0)
         val lastSecond = ((clipBounds.right / pixelsPerSecond) + 1).toInt()
             .coerceAtMost((totalDurationMs / 1000).toInt() + 1)
-
         textPaint.textAlign = Paint.Align.CENTER
         for (sec in firstSecond..lastSecond) {
-            val x = sec * pixelsPerSecond
-            canvas.drawLine(x, 0f, x, viewHeight, gridPaint)
             if (sec % 5 == 0) {
+                val x = sec * pixelsPerSecond
                 canvas.drawText("${sec}s", x, viewHeight + 40f, textPaint)
             }
         }
 
-        for (i in 0..pitchRange) {
-            val y = viewHeight - (i * keyHeight)
-            canvas.drawLine(0f, y, width.toFloat(), y, gridPaint)
-        }
+        // 음표 레이블은 PitchView(스크롤 바깥)에서 고정 표시
     }
 
     private fun drawNotes(canvas: Canvas) {
@@ -212,7 +209,7 @@ class PianoRollView(context: Context, attrs: AttributeSet?) : View(context, attr
             val top = viewHeight - ((note.note - minPitch + 1) * keyHeight)
             val bottom = top + keyHeight
 
-            notePaint.color = noteColors[note.note % noteColors.size]
+            notePaint.color = noteGrayColor
             canvas.drawRect(left, top, right, bottom, notePaint)
         }
     }

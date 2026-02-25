@@ -13,22 +13,21 @@ class PitchView(context: Context, attrs: AttributeSet?) : View(context, attrs) {
     private var minPitch = 48
     private var maxPitch = 72
     private val textPaint = Paint()
-    private val gridPaint = Paint()
     private val detectedPitchPaint = Paint()
 
     private var detectedPitch: Float? = null
 
     private val pitchNames = arrayOf("C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B")
-    private val timeAxisHeight = 40f
+    // PianoRollView와 동일한 timeAxisHeight로 맞춰 레이블 위치 정렬
+    private val timeAxisHeight = 60f
 
     init {
-        textPaint.color = Color.BLACK
-        textPaint.textSize = 20f
+        textPaint.color = Color.parseColor("#B0ACC8")
+        textPaint.textSize = 22f
         textPaint.textAlign = Paint.Align.CENTER
-        gridPaint.color = Color.LTGRAY
-        gridPaint.strokeWidth = 1f
-        detectedPitchPaint.color = Color.RED
-        detectedPitchPaint.strokeWidth = 5f
+        textPaint.isAntiAlias = true
+        detectedPitchPaint.color = Color.parseColor("#9B72CB")
+        detectedPitchPaint.strokeWidth = 4f
     }
 
     fun setPitchRange(minPitch: Int, maxPitch: Int) {
@@ -38,13 +37,11 @@ class PitchView(context: Context, attrs: AttributeSet?) : View(context, attrs) {
         invalidate()
     }
 
-    /** 기존 사용(= MIDI note float로 들어오는 경우) */
     fun setDetectedPitch(pitch: Float) {
         this.detectedPitch = pitch
         invalidate()
     }
 
-    /** (중요) PianoFragment에서 setPitchHz를 부르면 여기가 받아서 변환해줌 */
     fun setPitchHz(pitchHz: Float) {
         if (pitchHz <= 0f) {
             clearDetectedPitch()
@@ -60,7 +57,7 @@ class PitchView(context: Context, attrs: AttributeSet?) : View(context, attrs) {
     }
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
-        val desiredWidth = (paddingLeft + paddingRight + textPaint.measureText("C#8")).toInt()
+        val desiredWidth = (paddingLeft + paddingRight + textPaint.measureText("C#8") + 8).toInt()
         val measuredHeight = getDefaultSize(suggestedMinimumHeight, heightMeasureSpec)
         setMeasuredDimension(desiredWidth, measuredHeight)
     }
@@ -68,23 +65,26 @@ class PitchView(context: Context, attrs: AttributeSet?) : View(context, attrs) {
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
         val availableHeight = height - timeAxisHeight
-        val pitchRange = (maxPitch - minPitch).coerceAtLeast(1)
-        val keyHeight = availableHeight / (pitchRange + 1)
+        val pitchRange = (maxPitch - minPitch + 1).coerceAtLeast(1)
+        val keyHeight = availableHeight / pitchRange
 
-        for (pitch in minPitch..maxPitch) {
+        // 겹치지 않도록 동적 간격 (최소 6음), 살짝 촘촘하게
+        val stride = ((textPaint.textSize * 1.8f / keyHeight).toInt() + 1).coerceAtLeast(6)
+
+        var pitch = minPitch
+        while (pitch <= maxPitch) {
             val octave = pitch / 12 - 1
             val name = pitchNames[pitch % 12]
-            val pitchLabel = "$name$octave"
+            val label = "$name$octave"
 
-            val y = availableHeight - ((pitch - minPitch) * keyHeight) - (keyHeight / 2) +
-                    (textPaint.descent() - textPaint.ascent()) / 4
+            val y = availableHeight - ((pitch - minPitch) * keyHeight) - keyHeight / 2f +
+                    (textPaint.descent() - textPaint.ascent()) / 4f
 
-            val lineY = availableHeight - ((pitch - minPitch) * keyHeight)
-            canvas.drawLine(0f, lineY, width.toFloat(), lineY, gridPaint)
-
-            canvas.drawText(pitchLabel, (width / 2).toFloat(), y, textPaint)
+            canvas.drawText(label, (width / 2).toFloat(), y, textPaint)
+            pitch += stride
         }
 
+        // 감지된 음정 표시선 (보라색)
         detectedPitch?.let {
             val y = availableHeight - ((it - minPitch) * keyHeight)
             canvas.drawLine(0f, y, width.toFloat(), y, detectedPitchPaint)

@@ -4,6 +4,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="@drawable/bg_gradient"
     android:padding="16dp">
 
     <EditText
@@ -13,6 +14,10 @@
         android:hint="노래 제목"
         android:imeOptions="actionSearch"
         android:inputType="text"
+        android:background="@drawable/bg_card"
+        android:padding="12dp"
+        android:textColor="@color/text_primary"
+        android:textColorHint="@color/text_secondary"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toStartOf="@+id/btnSearch"
         app:layout_constraintTop_toTopOf="parent"/>
@@ -23,6 +28,8 @@
         android:layout_height="48dp"
         android:contentDescription="search"
         android:src="@android:drawable/ic_menu_search"
+        android:tint="@color/accent_purple_light"
+        android:background="?attr/selectableItemBackgroundBorderless"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="parent"/>
 
@@ -41,6 +48,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="검색 결과가 없습니다."
+        android:textColor="@color/text_secondary"
         android:visibility="gone"
         app:layout_constraintTop_toBottomOf="@id/progress"
         app:layout_constraintStart_toStartOf="parent"
