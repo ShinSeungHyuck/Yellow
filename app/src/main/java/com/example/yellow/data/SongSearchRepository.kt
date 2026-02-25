@@ -43,7 +43,10 @@ class SongSearchRepository {
             }
             val midi = best ?: continue
 
-            val querySim = similarity(qNorm, mNorm)
+            // 멜로디-MIDI 유사도가 너무 낮으면 엉뚱한 쌍으로 판단해 제외
+            if (bestSim < 0.3) continue
+
+            val querySim = queryTitleScore(qNorm, mNorm)
             val finalScore = 0.75 * querySim + 0.25 * bestSim
 
             val id = Song.makeId(m.url, midi.url)
@@ -102,6 +105,33 @@ class SongSearchRepository {
         s.lowercase()
             .replace(Regex("\\s+"), "")
             .replace(Regex("[^0-9a-zA-Z가-힣]"), "")
+
+    /**
+     * 쿼리-제목 유사도 계산 (개선된 버전)
+     * 단순 Levenshtein 거리 대신 포함 관계를 우선 체크하여
+     * 짧은 검색어로 긴 제목을 가진 곡을 찾을 때 정확도를 높임
+     */
+    private fun queryTitleScore(qNorm: String, titleNorm: String): Double {
+        if (qNorm.isEmpty() || titleNorm.isEmpty()) return 0.0
+
+        // 1. 완전 일치
+        if (qNorm == titleNorm) return 1.0
+
+        // 2. 포함 관계 체크: 쿼리가 제목 안에 있으면 높은 점수
+        val idx = titleNorm.indexOf(qNorm)
+        if (idx >= 0) {
+            // 쿼리가 제목 길이를 얼마나 커버하는지 (높을수록 더 관련성 높음)
+            val coverage = qNorm.length.toDouble() / titleNorm.length
+            // 제목 앞부분(prefix)에 있을수록 보너스
+            val posBonus = if (idx == 0) 0.1 else 0.0
+            return (0.6 + posBonus + 0.3 * coverage).coerceIn(0.0, 1.0)
+        }
+
+        // 3. 포함 관계 없으면 기존 Levenshtein 유사도로 폴백 (오타 허용)
+        val dist = levenshtein(qNorm, titleNorm)
+        val maxLen = max(qNorm.length, titleNorm.length).toDouble()
+        return 1.0 - (dist / maxLen)
+    }
 
     private fun similarity(a: String, b: String): Double {
         if (a.isEmpty() && b.isEmpty()) return 1.0

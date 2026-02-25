@@ -293,8 +293,8 @@ class PianoFragment : Fragment(R.layout.fragment_piano) {
                 )
                 val decidedDelayMs = (decidedDelaySec * 1000).toLong()
 
-                // 가사 로드(제목 기반 유사도 선택) - 기존 그대로
-                val lrcText = fetchSyncedLyricsFromLrclibBestTitleMatch(song.queryTitle)
+                // 가사 로드: song.title(실제 곡명)을 우선 사용, queryTitle은 아티스트 힌트 추출용
+                val lrcText = fetchSyncedLyricsFromLrclibBestTitleMatch(song.title, song.queryTitle)
                 val parsedLrc = parseLrc(lrcText)
 
                 withContext(Dispatchers.Main) {
@@ -631,13 +631,29 @@ class PianoFragment : Fragment(R.layout.fragment_piano) {
         }
     }
 
-    // ---- LRCLIB: 기존 그대로 ----
-    private fun fetchSyncedLyricsFromLrclibBestTitleMatch(inputTitle: String): String {
-        val title = inputTitle.trim()
+    // ---- LRCLIB ----
+    /**
+     * LRCLIB에서 동기화 가사를 검색한다.
+     * - trackTitle: 실제 곡명 (API 검색 기준)
+     * - queryTitle: 검색어 또는 카탈로그 원본 제목 → "곡명 - 아티스트" 형식이면 아티스트 추출에 활용
+     */
+    private fun fetchSyncedLyricsFromLrclibBestTitleMatch(trackTitle: String, queryTitle: String = ""): String {
+        val title = trackTitle.trim()
         if (title.isBlank()) return ""
 
+        // queryTitle이 "곡명 - 아티스트" 패턴이면 아티스트 힌트 추출 (카탈로그 곡에서 활용)
+        val artistHint = run {
+            val parts = queryTitle.split(" - ", limit = 2)
+            if (parts.size == 2) parts[1].trim().ifBlank { null } else null
+        }
+
         val titleEnc = URLEncoder.encode(title, "UTF-8")
-        val searchUrl = "https://lrclib.net/api/search?track_name=$titleEnc"
+        val searchUrl = if (!artistHint.isNullOrBlank()) {
+            val artistEnc = URLEncoder.encode(artistHint, "UTF-8")
+            "https://lrclib.net/api/search?track_name=$titleEnc&artist_name=$artistEnc"
+        } else {
+            "https://lrclib.net/api/search?track_name=$titleEnc"
+        }
 
         return try {
             val body = httpGetText(searchUrl)
@@ -671,19 +687,55 @@ class PianoFragment : Fragment(R.layout.fragment_piano) {
             val track = o.optString("trackName", o.optString("track_name", ""))
             if (track.isBlank()) continue
 
-            val score = titleSimilarity(inNorm, normalizeTitle(track))
+            val score = improvedTitleSimilarity(inNorm, normalizeTitle(track))
             if (score > bestScore) {
                 bestScore = score
                 bestObj = o
             }
         }
-        return bestObj
+
+        // 최고 점수가 임계값 미만이면 매칭 실패로 처리 (엉뚱한 가사 표시 방지)
+        val MIN_MATCH_SCORE = 0.4
+        return if (bestScore >= MIN_MATCH_SCORE) bestObj else null
     }
 
     private fun normalizeTitle(s: String): String {
         return s.lowercase()
             .replace(Regex("\\s+"), "")
             .replace(Regex("[^0-9a-zA-Z가-힣]"), "")
+    }
+
+    /**
+     * 가사 제목 유사도 계산 (개선된 버전)
+     * 단순 Levenshtein 대신 포함 관계를 우선 체크하여 정확도 향상
+     */
+    private fun improvedTitleSimilarity(qNorm: String, titleNorm: String): Double {
+        if (qNorm.isEmpty() && titleNorm.isEmpty()) return 1.0
+        if (qNorm.isEmpty() || titleNorm.isEmpty()) return 0.0
+
+        // 1. 완전 일치
+        if (qNorm == titleNorm) return 1.0
+
+        // 2. 검색어가 제목 안에 포함 (예: "어제의나에게" 검색 → lrclib의 "어제의 나에게" 매칭)
+        val idx = titleNorm.indexOf(qNorm)
+        if (idx >= 0) {
+            val coverage = qNorm.length.toDouble() / titleNorm.length
+            val posBonus = if (idx == 0) 0.1 else 0.0
+            return (0.6 + posBonus + 0.3 * coverage).coerceIn(0.0, 1.0)
+        }
+
+        // 3. 제목이 검색어 안에 포함 (lrclib 제목이 더 짧은 경우)
+        val idxRev = qNorm.indexOf(titleNorm)
+        if (idxRev >= 0) {
+            val coverage = titleNorm.length.toDouble() / qNorm.length
+            val posBonus = if (idxRev == 0) 0.1 else 0.0
+            return (0.5 + posBonus + 0.3 * coverage).coerceIn(0.0, 1.0)
+        }
+
+        // 4. 포함 관계 없으면 Levenshtein 폴백 (오타 허용)
+        val dist = levenshtein(qNorm, titleNorm)
+        val maxLen = maxOf(qNorm.length, titleNorm.length).toDouble()
+        return 1.0 - (dist / maxLen)
     }
 
     private fun titleSimilarity(a: String, b: String): Double {
