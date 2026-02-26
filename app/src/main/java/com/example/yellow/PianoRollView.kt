@@ -18,9 +18,12 @@ class PianoRollView(context: Context, attrs: AttributeSet?) : View(context, attr
     private val notePaint = Paint()
     private val gridPaint = Paint()
     private val textPaint = Paint()
-    private val livePitchPaint = Paint()
+    // 네온 효과: 외부 글로우 / 미드 글로우 / 흰색 코어
+    private val neonOuterPaint = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val neonMidPaint   = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val neonCorePaint  = Paint(Paint.ANTI_ALIAS_FLAG)
 
-    private val noteGrayColor = Color.parseColor("#9E9E9E")
+    private val noteGrayColor = Color.parseColor("#24252A")
 
     // 음표 이름 배열 (MIDI 음번호 → 이름 변환)
     private val noteNames = arrayOf("C","C#","D","D#","E","F","F#","G","G#","A","A#","B")
@@ -56,8 +59,15 @@ class PianoRollView(context: Context, attrs: AttributeSet?) : View(context, attr
         textPaint.textSize = 28f
         textPaint.isAntiAlias = true
 
-        livePitchPaint.color = Color.parseColor("#00E5FF")
-        livePitchPaint.style = Paint.Style.FILL
+        // 네온 효과: 다중 반투명 레이어로 글로우 시뮬레이션 (하드웨어 가속 유지)
+        neonOuterPaint.color = Color.parseColor("#00E5FF")
+        neonOuterPaint.style = Paint.Style.FILL
+
+        neonMidPaint.color = Color.parseColor("#50EEFF")
+        neonMidPaint.style = Paint.Style.FILL
+
+        neonCorePaint.color = Color.WHITE
+        neonCorePaint.style = Paint.Style.FILL
 
         notePaint.style = Paint.Style.FILL
     }
@@ -237,8 +247,25 @@ class PianoRollView(context: Context, attrs: AttributeSet?) : View(context, attr
 
             val top = viewHeight - ((roundedMidi - minPitch + 1) * keyHeight)
             val bottom = top + keyHeight
+            val halfH = keyHeight / 2f
+            val midY = top + halfH
 
-            canvas.drawRect(left, top, right, bottom, livePitchPaint)
+            // 외곽 글로우: 선명한 하늘색 (1.4x)
+            neonOuterPaint.alpha = 35
+            canvas.drawRect(left, midY - halfH * 1.4f, right, midY + halfH * 1.4f, neonOuterPaint)
+
+            // 본체: 네온 하늘색 (대부분을 차지)
+            neonOuterPaint.alpha = 200
+            canvas.drawRect(left, top, right, bottom, neonOuterPaint)
+
+            // 내부: 밝은 하늘색 (바 높이의 65%)
+            neonMidPaint.alpha = 220
+            canvas.drawRect(left, midY - halfH * 0.65f, right, midY + halfH * 0.65f, neonMidPaint)
+
+            // 코어: 흰색 (바 높이의 12%, 아주 얇게)
+            val coreH = (halfH * 0.12f).coerceAtLeast(1.5f)
+            neonCorePaint.alpha = 200
+            canvas.drawRect(left, midY - coreH, right, midY + coreH, neonCorePaint)
         }
     }
 }

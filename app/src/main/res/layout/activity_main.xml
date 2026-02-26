@@ -25,6 +25,8 @@
         android:background="@color/surface_card"
         app:menu="@menu/bottom_nav_menu"
         app:labelVisibilityMode="labeled"
+        app:itemIconTint="@color/text_primary"
+        app:itemTextColor="@color/text_primary"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"/>

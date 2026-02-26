@@ -22,11 +22,11 @@ class PitchView(context: Context, attrs: AttributeSet?) : View(context, attrs) {
     private val timeAxisHeight = 60f
 
     init {
-        textPaint.color = Color.parseColor("#B0ACC8")
+        textPaint.color = Color.parseColor("#9AAABB")
         textPaint.textSize = 22f
         textPaint.textAlign = Paint.Align.CENTER
         textPaint.isAntiAlias = true
-        detectedPitchPaint.color = Color.parseColor("#9B72CB")
+        detectedPitchPaint.color = Color.parseColor("#00C8E8")
         detectedPitchPaint.strokeWidth = 4f
     }
 
@@ -84,7 +84,7 @@ class PitchView(context: Context, attrs: AttributeSet?) : View(context, attrs) {
             pitch += stride
         }
 
-        // 감지된 음정 표시선 (보라색)
+        // 감지된 음정 표시선 (하늘색)
         detectedPitch?.let {
             val y = availableHeight - ((it - minPitch) * keyHeight)
             canvas.drawLine(0f, y, width.toFloat(), y, detectedPitchPaint)

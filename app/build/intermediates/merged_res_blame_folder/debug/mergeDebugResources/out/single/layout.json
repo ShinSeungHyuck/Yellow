@@ -1,9 +1,5 @@
 [
     {
-        "merged": "com.example.yellow.app-mergeDebugResources-51:/layout/fragment_piano.xml",
-        "source": "com.example.yellow.app-main-54:/layout/fragment_piano.xml"
-    },
-    {
         "merged": "C:\\Users\\PrdSup\\.gradle\\daemon\\8.13\\com.example.yellow.app-mergeDebugResources-51:\\layout\\fragment_home.xml",
         "source": "C:\\Users\\PrdSup\\.gradle\\daemon\\8.13\\com.example.yellow.app-main-54:\\layout\\fragment_home.xml"
     },
@@ -46,5 +42,9 @@
     {
         "merged": "C:\\Users\\PrdSup\\.gradle\\daemon\\8.13\\com.example.yellow.app-mergeDebugResources-51:\\layout\\activity_splash.xml",
         "source": "C:\\Users\\PrdSup\\.gradle\\daemon\\8.13\\com.example.yellow.app-main-54:\\layout\\activity_splash.xml"
+    },
+    {
+        "merged": "com.example.yellow.app-mergeDebugResources-51:/layout/fragment_search.xml",
+        "source": "com.example.yellow.app-main-54:/layout/fragment_search.xml"
     }
 ]

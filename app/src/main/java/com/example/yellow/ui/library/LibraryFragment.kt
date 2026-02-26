@@ -59,8 +59,9 @@ class LibraryFragment : Fragment() {
 
         val items = entries.map { e ->
             val s = e.song
-            // 표시 이름은 항상 실제 곡 이름(title) 사용, queryTitle은 가사 검색용으로만 유지
-            val (mainTitle, artist) = splitTitleArtist(s.title)
+            // queryTitle에 "곡명 - 아티스트" 원본이 저장되므로 아티스트 추출은 queryTitle 우선 사용
+            val fullTitle = s.queryTitle.ifBlank { s.title }
+            val (mainTitle, artist) = splitTitleArtist(fullTitle)
 
             val displaySong = s.copy(
                 title = mainTitle
