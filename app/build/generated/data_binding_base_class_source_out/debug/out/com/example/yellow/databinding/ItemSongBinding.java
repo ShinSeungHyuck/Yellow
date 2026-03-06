@@ -5,6 +5,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageButton;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -32,13 +33,18 @@ public final class ItemSongBinding implements ViewBinding {
   @NonNull
   public final TextView itemTitle;
 
+  @NonNull
+  public final LinearLayout textGroup;
+
   private ItemSongBinding(@NonNull ConstraintLayout rootView, @NonNull TextView itemKeyBadge,
-      @NonNull ImageButton itemStar, @NonNull TextView itemSubtitle, @NonNull TextView itemTitle) {
+      @NonNull ImageButton itemStar, @NonNull TextView itemSubtitle, @NonNull TextView itemTitle,
+      @NonNull LinearLayout textGroup) {
     this.rootView = rootView;
     this.itemKeyBadge = itemKeyBadge;
     this.itemStar = itemStar;
     this.itemSubtitle = itemSubtitle;
     this.itemTitle = itemTitle;
+    this.textGroup = textGroup;
   }
 
   @Override
@@ -92,8 +98,14 @@ public final class ItemSongBinding implements ViewBinding {
         break missingId;
       }
 
+      id = R.id.text_group;
+      LinearLayout textGroup = ViewBindings.findChildViewById(rootView, id);
+      if (textGroup == null) {
+        break missingId;
+      }
+
       return new ItemSongBinding((ConstraintLayout) rootView, itemKeyBadge, itemStar, itemSubtitle,
-          itemTitle);
+          itemTitle, textGroup);
     }
     String missingId = rootView.getResources().getResourceName(id);
     throw new NullPointerException("Missing required view with ID: ".concat(missingId));

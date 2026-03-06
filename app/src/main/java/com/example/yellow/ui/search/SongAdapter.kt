@@ -5,6 +5,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageButton
 import android.widget.TextView
+import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
@@ -58,6 +59,13 @@ class SongAdapter(
 
         holder.star.setImageResource(
             if (item.isFavorite) R.drawable.ic_star_filled else R.drawable.ic_star_outline
+        )
+        // 즐겨찾기 여부에 따라 별 색상 적용
+        holder.star.setColorFilter(
+            ContextCompat.getColor(
+                holder.itemView.context,
+                if (item.isFavorite) R.color.accent_purple_light else R.color.text_secondary
+            )
         )
 
         holder.itemView.setOnClickListener { onClick(item) }

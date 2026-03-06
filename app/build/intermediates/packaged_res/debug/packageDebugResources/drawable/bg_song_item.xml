@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 노래 목록 아이템 카드: 라운드 -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <corners android:radius="12dp"/>
+    <solid android:color="@color/surface_card"/>
+</shape>

@@ -172,6 +172,8 @@ class PianoRollView(context: Context, attrs: AttributeSet?) : View(context, attr
         invalidate()
     }
 
+    fun scrollXForTime(timeMs: Long): Int = (timeMs * pixelsPerSecond / 1000f).toInt()
+
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
         val desiredWidth = (totalDurationMs / 1000f * pixelsPerSecond).toInt()
         val measuredHeight = getDefaultSize(suggestedMinimumHeight, heightMeasureSpec)

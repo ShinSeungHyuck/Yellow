@@ -9,6 +9,7 @@ class SongCatalogRepository(
 ) {
     data class CatalogItem(
         val title: String,
+        val artist: String,
         val melodyUrl: String,
         val midiUrl: String
     )
@@ -24,10 +25,11 @@ class SongCatalogRepository(
         for (i in 0 until arr.length()) {
             val o = arr.optJSONObject(i) ?: continue
             val title = o.optString("title", "")
+            val artist = o.optString("artist", "")
             val melodyUrl = o.optString("melodyUrl", "")
             val midiUrl = o.optString("midiUrl", "")
             if (title.isNotBlank() && melodyUrl.isNotBlank() && midiUrl.isNotBlank()) {
-                out.add(CatalogItem(title, melodyUrl, midiUrl))
+                out.add(CatalogItem(title, artist, melodyUrl, midiUrl))
             }
         }
         return out

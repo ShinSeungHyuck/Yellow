@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 전체 화면 배경: 다크 네이비 → 다크 인디고 세로 그라데이션 -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <gradient
+        android:type="linear"
+        android:angle="270"
+        android:startColor="@color/bg_top"
+        android:endColor="@color/bg_bottom"/>
+</shape>

@@ -147,12 +147,14 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
 
     private fun SongCatalogRepository.CatalogItem.toSong(): Song {
         val id = Song.makeId(melodyUrl, midiUrl)
+        // queryTitle에 "곡명 - 아티스트" 형식으로 저장 (아티스트 표시 및 가사 검색 활용)
+        val fullTitle = if (artist.isNotBlank()) "$title - $artist" else title
         return Song(
             id = id,
             title = title,
             melodyUrl = melodyUrl,
             midiUrl = midiUrl,
-            queryTitle = title
+            queryTitle = fullTitle
         )
     }
 
@@ -174,7 +176,8 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         val favMap = loadFavoriteMap()
 
         val adapterItems = preview.map { s ->
-            val (mainTitle, artist) = splitTitleArtist(s.title)
+            // queryTitle에 "곡명 - 아티스트" 형식이 저장되므로 이를 우선 사용
+            val (mainTitle, artist) = splitTitleArtist(s.queryTitle.ifBlank { s.title })
             val displaySong = s.copy(title = mainTitle, queryTitle = s.queryTitle)
             SongAdapter.Item(
                 song = displaySong,

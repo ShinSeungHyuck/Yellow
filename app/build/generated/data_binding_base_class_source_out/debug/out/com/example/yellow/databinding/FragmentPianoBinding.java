@@ -34,6 +34,9 @@ public final class FragmentPianoBinding implements ViewBinding {
   public final ImageButton btnFavorite;
 
   @NonNull
+  public final ImageButton btnMute;
+
+  @NonNull
   public final Button btnSeekMinus10;
 
   @NonNull
@@ -85,17 +88,19 @@ public final class FragmentPianoBinding implements ViewBinding {
   public final TextView titleText;
 
   private FragmentPianoBinding(@NonNull ConstraintLayout rootView, @NonNull ImageButton btnBack,
-      @NonNull ImageButton btnFavorite, @NonNull Button btnSeekMinus10,
-      @NonNull Button btnSeekMinus30, @NonNull Button btnSeekPlus10, @NonNull Button btnSeekPlus30,
-      @NonNull LinearLayout controlsContainer, @NonNull TextView keyOffsetText,
-      @NonNull SeekBar keySeekBar, @NonNull ProgressBar loadingProgress,
-      @NonNull TextView lyricsText, @NonNull PianoRollView pianoRollView,
-      @NonNull PitchView pitchView, @NonNull LinearLayout practiceTopbar,
-      @NonNull HorizontalScrollView scrollPiano, @NonNull Button startButton,
-      @NonNull Button stopButton, @NonNull Button stopSongButton, @NonNull TextView titleText) {
+      @NonNull ImageButton btnFavorite, @NonNull ImageButton btnMute,
+      @NonNull Button btnSeekMinus10, @NonNull Button btnSeekMinus30, @NonNull Button btnSeekPlus10,
+      @NonNull Button btnSeekPlus30, @NonNull LinearLayout controlsContainer,
+      @NonNull TextView keyOffsetText, @NonNull SeekBar keySeekBar,
+      @NonNull ProgressBar loadingProgress, @NonNull TextView lyricsText,
+      @NonNull PianoRollView pianoRollView, @NonNull PitchView pitchView,
+      @NonNull LinearLayout practiceTopbar, @NonNull HorizontalScrollView scrollPiano,
+      @NonNull Button startButton, @NonNull Button stopButton, @NonNull Button stopSongButton,
+      @NonNull TextView titleText) {
     this.rootView = rootView;
     this.btnBack = btnBack;
     this.btnFavorite = btnFavorite;
+    this.btnMute = btnMute;
     this.btnSeekMinus10 = btnSeekMinus10;
     this.btnSeekMinus30 = btnSeekMinus30;
     this.btnSeekPlus10 = btnSeekPlus10;
@@ -151,6 +156,12 @@ public final class FragmentPianoBinding implements ViewBinding {
       id = R.id.btn_favorite;
       ImageButton btnFavorite = ViewBindings.findChildViewById(rootView, id);
       if (btnFavorite == null) {
+        break missingId;
+      }
+
+      id = R.id.btn_mute;
+      ImageButton btnMute = ViewBindings.findChildViewById(rootView, id);
+      if (btnMute == null) {
         break missingId;
       }
 
@@ -256,7 +267,7 @@ public final class FragmentPianoBinding implements ViewBinding {
         break missingId;
       }
 
-      return new FragmentPianoBinding((ConstraintLayout) rootView, btnBack, btnFavorite,
+      return new FragmentPianoBinding((ConstraintLayout) rootView, btnBack, btnFavorite, btnMute,
           btnSeekMinus10, btnSeekMinus30, btnSeekPlus10, btnSeekPlus30, controlsContainer,
           keyOffsetText, keySeekBar, loadingProgress, lyricsText, pianoRollView, pitchView,
           practiceTopbar, scrollPiano, startButton, stopButton, stopSongButton, titleText);

@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 범용 라운드 카드 배경 (검색바, 일반 패널용) -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <corners android:radius="16dp"/>
+    <solid android:color="@color/surface_card"/>
+</shape>

@@ -1,0 +1,24 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <!-- 스피커 본체 -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M3,9 L7,9 L12,4 L12,20 L7,15 L3,15 Z"/>
+    <!-- 작은 음파 -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="1.8"
+        android:strokeLineCap="round"
+        android:pathData="M15,9 Q17,12 15,15"/>
+    <!-- 큰 음파 -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="1.8"
+        android:strokeLineCap="round"
+        android:pathData="M17.5,6.5 Q21.5,12 17.5,17.5"/>
+</vector>

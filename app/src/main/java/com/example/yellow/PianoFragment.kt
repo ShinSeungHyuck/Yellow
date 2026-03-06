@@ -8,6 +8,7 @@ import android.os.SystemClock
 import android.util.Log
 import android.view.View
 import android.widget.*
+import android.widget.HorizontalScrollView
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
@@ -55,8 +56,11 @@ class PianoFragment : Fragment(R.layout.fragment_piano) {
     // Topbar
     private lateinit var backBtn: ImageButton
     private lateinit var titleText: TextView
+    private lateinit var muteBtn: ImageButton
     private lateinit var favBtn: ImageButton
     private lateinit var loading: ProgressBar
+
+    private var isMuted: Boolean = false
 
     // Controls
     private lateinit var keySeekBar: SeekBar
@@ -72,6 +76,7 @@ class PianoFragment : Fragment(R.layout.fragment_piano) {
     private var lyricsTextView: TextView? = null
     private var pianoRollView: PianoRollView? = null
     private var pitchView: PitchView? = null
+    private lateinit var scrollPiano: HorizontalScrollView
 
     private var player: ExoPlayer? = null
     private var currentSemitones: Int = 0
@@ -111,6 +116,7 @@ class PianoFragment : Fragment(R.layout.fragment_piano) {
 
         backBtn = view.findViewById(R.id.btn_back)
         titleText = view.findViewById(R.id.title_text)
+        muteBtn = view.findViewById(R.id.btn_mute)
         favBtn = view.findViewById(R.id.btn_favorite)
         loading = view.findViewById(R.id.loadingProgress)
 
@@ -123,6 +129,7 @@ class PianoFragment : Fragment(R.layout.fragment_piano) {
 
         pianoRollView = view.findViewById(R.id.piano_roll_view)
         pitchView = view.findViewById(R.id.pitch_view)
+        scrollPiano = view.findViewById(R.id.scroll_piano)
 
         btnSeekMinus30 = view.findViewById(R.id.btn_seek_minus_30)
         btnSeekMinus10 = view.findViewById(R.id.btn_seek_minus_10)
@@ -135,6 +142,12 @@ class PianoFragment : Fragment(R.layout.fragment_piano) {
         setControlsEnabled(false)
 
         backBtn.setOnClickListener { findNavController().navigateUp() }
+
+        muteBtn.setOnClickListener {
+            isMuted = !isMuted
+            player?.volume = if (isMuted) 0f else 1.0f
+            updateMuteIcon(isMuted)
+        }
 
         favBtn.setOnClickListener {
             currentSong?.let { s ->
@@ -245,8 +258,24 @@ class PianoFragment : Fragment(R.layout.fragment_piano) {
         keySeekBar.isEnabled = enabled
     }
 
+    private fun updateMuteIcon(muted: Boolean) {
+        muteBtn.setImageResource(if (muted) R.drawable.ic_volume_off else R.drawable.ic_volume_on)
+        muteBtn.setColorFilter(
+            ContextCompat.getColor(
+                requireContext(),
+                if (muted) R.color.accent_purple_light else R.color.text_primary
+            )
+        )
+    }
+
     private fun updateFavoriteIcon(isFav: Boolean) {
         favBtn.setImageResource(if (isFav) R.drawable.ic_star_filled else R.drawable.ic_star_outline)
+        favBtn.setColorFilter(
+            ContextCompat.getColor(
+                requireContext(),
+                if (isFav) R.color.accent_purple_light else R.color.text_secondary
+            )
+        )
     }
 
     // ---- 기존 searchAndLoad를 "loadSong"으로 치환 (자동 시간밀기 로직 유지) ----
@@ -361,6 +390,11 @@ class PianoFragment : Fragment(R.layout.fragment_piano) {
         p.seekTo(newPos)
         lastSafePlayerPositionMs = newPos
 
+        pianoRollView?.let { prv ->
+            val targetX = (prv.scrollXForTime(newPos) - scrollPiano.width / 2).coerceAtLeast(0)
+            scrollPiano.scrollTo(targetX, 0)
+        }
+
         pianoRollView?.clearLivePitches()
         pitchView?.clearDetectedPitch()
         renderLyricsAtPlayerPos(newPos)
@@ -404,7 +438,15 @@ class PianoFragment : Fragment(R.layout.fragment_piano) {
         if (positionSamplerJob != null) return
         positionSamplerJob = viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
             while (true) {
-                player?.let { lastSafePlayerPositionMs = it.currentPosition }
+                player?.let {
+                    lastSafePlayerPositionMs = it.currentPosition
+                    if (it.isPlaying) {
+                        val prv = pianoRollView ?: return@let
+                        val targetX = (prv.scrollXForTime(lastSafePlayerPositionMs) - scrollPiano.width / 2)
+                            .coerceAtLeast(0)
+                        scrollPiano.scrollTo(targetX, 0)
+                    }
+                }
                 delay(POSITION_SAMPLE_MS)
             }
         }
@@ -429,7 +471,7 @@ class PianoFragment : Fragment(R.layout.fragment_piano) {
         exoPlayer.setAudioAttributes(attrs, true)
 
         exoPlayer.setHandleAudioBecomingNoisy(true)
-        exoPlayer.volume = 1.0f
+        exoPlayer.volume = if (isMuted) 0f else 1.0f
 
         exoPlayer.addListener(object : Player.Listener {
             override fun onPlayerError(error: PlaybackException) {

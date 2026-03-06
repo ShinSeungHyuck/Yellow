@@ -3230,6 +3230,8 @@ int drawable ic_notifications_black_24dp 0x7f0800ef
 int drawable ic_search_black_24 0x7f0800f0
 int drawable ic_star_filled 0x7f0800f1
 int drawable ic_star_outline 0x7f0800f2
+int drawable ic_volume_off 0x7f080143
+int drawable ic_volume_on 0x7f080144
 int drawable m3_appbar_background 0x7f0800f3
 int drawable m3_avd_hide_password 0x7f0800f4
 int drawable m3_avd_show_password 0x7f0800f5
@@ -3426,6 +3428,7 @@ int id browser_actions_menu_view 0x7f0a0073
 int id btnSearch 0x7f0a027a
 int id btn_back 0x7f0a0074
 int id btn_favorite 0x7f0a0075
+int id btn_mute 0x7f0a0281
 int id btn_seek_minus_10 0x7f0a0076
 int id btn_seek_minus_30 0x7f0a0077
 int id btn_seek_plus_10 0x7f0a0078
@@ -3883,6 +3886,7 @@ int id textSpacerNoTitle 0x7f0a023e
 int id textStart 0x7f0a023f
 int id textTop 0x7f0a0240
 int id text_dashboard 0x7f0a0241
+int id text_group 0x7f0a0280
 int id text_input_end_icon 0x7f0a0242
 int id text_input_error_icon 0x7f0a0243
 int id text_input_start_icon 0x7f0a0244

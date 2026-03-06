@@ -8,17 +8,36 @@
     android:padding="12dp"
     android:layout_marginBottom="8dp">
 
-    <TextView
-        android:id="@+id/item_title"
+    <!-- 제목 + 가수를 LinearLayout으로 묶어 wrap_content 렌더링 보장 -->
+    <LinearLayout
+        android:id="@+id/text_group"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:text="Title"
-        android:textSize="16sp"
-        android:textStyle="bold"
-        android:textColor="@color/text_primary"
+        android:orientation="vertical"
+        android:gravity="center_vertical"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toStartOf="@id/item_key_badge"
-        app:layout_constraintTop_toTopOf="parent"/>
+        app:layout_constraintTop_toTopOf="parent">
+
+        <TextView
+            android:id="@+id/item_title"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Title"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:textColor="@color/text_primary"/>
+
+        <TextView
+            android:id="@+id/item_subtitle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="subtitle"
+            android:textSize="12sp"
+            android:textColor="@color/text_secondary"
+            android:layout_marginTop="2dp"/>
+
+    </LinearLayout>
 
     <!-- 키 변경 표시(+2/-3) -->
     <TextView
@@ -46,18 +65,7 @@
         android:contentDescription="favorite"
         android:src="@drawable/ic_star_outline"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="parent"/>
-
-    <TextView
-        android:id="@+id/item_subtitle"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:text="subtitle"
-        android:textSize="12sp"
-        android:textColor="@color/text_secondary"
-        app:layout_constraintStart_toStartOf="@id/item_title"
-        app:layout_constraintEnd_toStartOf="@id/item_star"
-        app:layout_constraintTop_toBottomOf="@id/item_title"
+        app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toBottomOf="parent"/>
 
 </androidx.constraintlayout.widget.ConstraintLayout>
