@@ -7,6 +7,7 @@ color bg_bottom
 color bg_top
 color black
 color border_subtle
+color nav_bar_bg
 color purple_200
 color purple_500
 color purple_700

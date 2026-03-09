@@ -60,10 +60,10 @@ class PianoRollView(context: Context, attrs: AttributeSet?) : View(context, attr
         textPaint.isAntiAlias = true
 
         // 네온 효과: 다중 반투명 레이어로 글로우 시뮬레이션 (하드웨어 가속 유지)
-        neonOuterPaint.color = Color.parseColor("#00E5FF")
+        neonOuterPaint.color = Color.parseColor("#3CD3FE")
         neonOuterPaint.style = Paint.Style.FILL
 
-        neonMidPaint.color = Color.parseColor("#50EEFF")
+        neonMidPaint.color = Color.parseColor("#3CD3FE")
         neonMidPaint.style = Paint.Style.FILL
 
         neonCorePaint.color = Color.WHITE
@@ -222,7 +222,8 @@ class PianoRollView(context: Context, attrs: AttributeSet?) : View(context, attr
             val bottom = top + keyHeight
 
             notePaint.color = noteGrayColor
-            canvas.drawRect(left, top, right, bottom, notePaint)
+            val rx = (keyHeight * 0.35f).coerceIn(2f, 10f)
+            canvas.drawRoundRect(left, top, right, bottom, rx, rx, notePaint)
         }
     }
 
@@ -251,23 +252,25 @@ class PianoRollView(context: Context, attrs: AttributeSet?) : View(context, attr
             val bottom = top + keyHeight
             val halfH = keyHeight / 2f
             val midY = top + halfH
+            val rx = (halfH * 0.35f).coerceIn(2f, 10f)
 
-            // 외곽 글로우: 선명한 하늘색 (1.4x)
-            neonOuterPaint.alpha = 35
-            canvas.drawRect(left, midY - halfH * 1.4f, right, midY + halfH * 1.4f, neonOuterPaint)
+            // 외곽 cyan halo (2.0x height, 아주 연한 광원)
+            neonOuterPaint.alpha = 25
+            canvas.drawRoundRect(left, midY - halfH * 2.0f, right, midY + halfH * 2.0f, rx, rx, neonOuterPaint)
 
-            // 본체: 네온 하늘색 (대부분을 차지)
-            neonOuterPaint.alpha = 200
-            canvas.drawRect(left, top, right, bottom, neonOuterPaint)
+            // 본체 cyan (1.0x height)
+            neonOuterPaint.alpha = 180
+            canvas.drawRoundRect(left, top, right, bottom, rx, rx, neonOuterPaint)
 
-            // 내부: 밝은 하늘색 (바 높이의 65%)
-            neonMidPaint.alpha = 220
-            canvas.drawRect(left, midY - halfH * 0.65f, right, midY + halfH * 0.65f, neonMidPaint)
+            // 흰색 넓은 중심 (0.45x height) — 빛나는 중심 효과
+            val whiteRx = (halfH * 0.45f * 0.5f).coerceIn(1f, 6f)
+            neonCorePaint.alpha = 180
+            canvas.drawRoundRect(left, midY - halfH * 0.45f, right, midY + halfH * 0.45f, whiteRx, whiteRx, neonCorePaint)
 
-            // 코어: 흰색 (바 높이의 12%, 아주 얇게)
-            val coreH = (halfH * 0.12f).coerceAtLeast(1.5f)
-            neonCorePaint.alpha = 200
-            canvas.drawRect(left, midY - coreH, right, midY + coreH, neonCorePaint)
+            // 흰색 핫코어 (0.15x height) — 밝은 중심선
+            val coreH = (halfH * 0.15f).coerceAtLeast(1.5f)
+            neonCorePaint.alpha = 255
+            canvas.drawRoundRect(left, midY - coreH, right, midY + coreH, coreH, coreH, neonCorePaint)
         }
     }
 }

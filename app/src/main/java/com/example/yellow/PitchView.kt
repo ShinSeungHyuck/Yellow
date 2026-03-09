@@ -26,7 +26,7 @@ class PitchView(context: Context, attrs: AttributeSet?) : View(context, attrs) {
         textPaint.textSize = 22f
         textPaint.textAlign = Paint.Align.CENTER
         textPaint.isAntiAlias = true
-        detectedPitchPaint.color = Color.parseColor("#00C8E8")
+        detectedPitchPaint.color = Color.parseColor("#3CD3FE")
         detectedPitchPaint.strokeWidth = 4f
     }
 

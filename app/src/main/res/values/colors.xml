@@ -8,14 +8,15 @@
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
 
-    <!-- 다크 블루 팔레트 -->
-    <color name="bg_top">#060E19</color>
-    <color name="bg_bottom">#280D2E</color>
-    <color name="surface_card">#24252A</color>
-    <color name="surface_elevated">#2E2F35</color>
-    <color name="accent_purple">#0096B4</color>
-    <color name="accent_purple_light">#00C8E8</color>
-    <color name="accent_purple_dark">#006E8A</color>
+    <!-- 딥 코스믹 다크 팔레트 -->
+    <color name="bg_top">#0A0A1E</color>
+    <color name="bg_bottom">#150A2E</color>
+    <color name="surface_card">#1AFFFFFF</color>     <!-- 흰색 10% 유리 효과 -->
+    <color name="surface_elevated">#2EFFFFFF</color>  <!-- 흰색 18% 유리 효과 -->
+    <color name="nav_bar_bg">#E80A0A1E</color>        <!-- 하단 네비게이션 전용: 91% 불투명 다크블루 -->
+    <color name="accent_purple">#1ABFE0</color>       <!-- Play 버튼용 (더 어두운 cyan) -->
+    <color name="accent_purple_light">#3CD3FE</color> <!-- 주요 하이라이트 cyan -->
+    <color name="accent_purple_dark">#0E8FB5</color>
     <color name="text_primary">#FFFFFF</color>
     <color name="text_secondary">#9AAABB</color>
     <color name="border_subtle">#383940</color>
