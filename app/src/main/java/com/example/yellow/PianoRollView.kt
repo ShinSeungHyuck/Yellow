@@ -3,8 +3,10 @@ package com.example.yellow
 import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Color
+import android.graphics.LinearGradient
 import android.graphics.Paint
 import android.graphics.Rect
+import android.graphics.Shader
 import android.os.SystemClock
 import android.util.AttributeSet
 import android.util.Log
@@ -18,10 +20,13 @@ class PianoRollView(context: Context, attrs: AttributeSet?) : View(context, attr
     private val notePaint = Paint()
     private val gridPaint = Paint()
     private val textPaint = Paint()
-    // 네온 효과: 외부 글로우 / 미드 글로우 / 흰색 코어
-    private val neonOuterPaint = Paint(Paint.ANTI_ALIAS_FLAG)
-    private val neonMidPaint   = Paint(Paint.ANTI_ALIAS_FLAG)
-    private val neonCorePaint  = Paint(Paint.ANTI_ALIAS_FLAG)
+    // 네온 효과: 외부 글로우 / 미드 글로우 / 흰색 코어 / 세로 그라데이션 바디
+    private val neonOuterPaint    = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val neonMidPaint      = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val neonCorePaint     = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val neonGradientPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.FILL
+    }
 
     private val noteGrayColor = Color.parseColor("#24252A")
 
@@ -233,44 +238,69 @@ class PianoRollView(context: Context, attrs: AttributeSet?) : View(context, attr
         val viewHeight = height - timeAxisHeight
         val pixelsPerMs = pixelsPerSecond / 1000f
 
+        // ── 1단계: 같은 MIDI 음이 200ms 이내로 연속되면 하나의 세그먼트로 병합 ──
+        data class MergedSeg(val startMs: Long, var endMs: Long, val midi: Int)
+        val merged = mutableListOf<MergedSeg>()
+
         for (i in 0 until livePitches.size - 1) {
             val p1 = livePitches[i]
             val p2 = livePitches[i + 1]
+            if (p2.first <= p1.first) continue          // 타임라인 역전 방어
+            val midi = p1.second.roundToInt()
+            if (midi < minPitch || midi > maxPitch) continue
 
-            // 타임라인이 역전되면 스킵(방어)
-            if (p2.first <= p1.first) continue
+            val last = merged.lastOrNull()
+            if (last != null && last.midi == midi && p1.first - last.endMs < 200L) {
+                // 동일 음 + 간격 200ms 미만 → 기존 세그먼트 연장
+                last.endMs = p2.first
+            } else {
+                merged.add(MergedSeg(p1.first, p2.first, midi))
+            }
+        }
 
-            val roundedMidi = p1.second.roundToInt()
-            if (roundedMidi < minPitch || roundedMidi > maxPitch) continue
-
-            val left = p1.first * pixelsPerMs
-            val right = p2.first * pixelsPerMs
+        // ── 2단계: 병합된 세그먼트 렌더링 ──
+        for (seg in merged) {
+            val left  = seg.startMs * pixelsPerMs
+            val right = seg.endMs   * pixelsPerMs
 
             if (right < clipBounds.left || left > clipBounds.right) continue
 
-            val top = viewHeight - ((roundedMidi - minPitch + 1) * keyHeight)
+            val top   = viewHeight - ((seg.midi - minPitch + 1) * keyHeight)
             val bottom = top + keyHeight
-            val halfH = keyHeight / 2f
-            val midY = top + halfH
-            val rx = (halfH * 0.35f).coerceIn(2f, 10f)
+            val halfH  = keyHeight / 2f
+            val midY   = top + halfH
+            val rx     = (halfH * 0.35f).coerceIn(2f, 10f)
 
-            // 외곽 cyan halo (1.2x height, 최소한으로 — 잔상 방지)
+            // Layer 1: 외곽 cyan halo (1.2x height, 잔상 방지를 위해 최소)
             neonOuterPaint.alpha = 8
-            canvas.drawRoundRect(left, midY - halfH * 1.2f, right, midY + halfH * 1.2f, rx, rx, neonOuterPaint)
+            canvas.drawRoundRect(
+                left, midY - halfH * 1.2f, right, midY + halfH * 1.2f,
+                rx, rx, neonOuterPaint
+            )
 
-            // 본체 cyan (1.0x height) — 대부분을 차지하는 선명한 하늘색
-            neonOuterPaint.alpha = 210
-            canvas.drawRoundRect(left, top, right, bottom, rx, rx, neonOuterPaint)
+            // Layer 2: 그라데이션 바디 — 세로 방향 cyan → white → cyan
+            val gradient = LinearGradient(
+                left, top, left, bottom,
+                intArrayOf(
+                    Color.parseColor("#3CD3FE"),
+                    Color.WHITE,
+                    Color.parseColor("#3CD3FE")
+                ),
+                floatArrayOf(0f, 0.5f, 1f),
+                Shader.TileMode.CLAMP
+            )
+            neonGradientPaint.shader = gradient
+            neonGradientPaint.alpha = 210
+            canvas.drawRoundRect(left, top, right, bottom, rx, rx, neonGradientPaint)
 
-            // 흰색 중심 (0.15x height) — 최소화, 살짝만
-            val whiteRx = (halfH * 0.15f * 0.5f).coerceIn(1f, 4f)
-            neonCorePaint.alpha = 100
-            canvas.drawRoundRect(left, midY - halfH * 0.15f, right, midY + halfH * 0.15f, whiteRx, whiteRx, neonCorePaint)
-
-            // 흰색 핫코어 (0.06x height) — 아주 얇은 선
-            val coreH = (halfH * 0.06f).coerceAtLeast(1f)
-            neonCorePaint.alpha = 160
-            canvas.drawRoundRect(left, midY - coreH, right, midY + coreH, coreH, coreH, neonCorePaint)
+            // Layer 3: 흰색 중심 하이라이트 (0.25x height — 이전 0.15x에서 확대)
+            val coreH  = (halfH * 0.25f).coerceAtLeast(1.5f)
+            val coreRx = (coreH * 0.5f).coerceIn(1f, 4f)
+            neonCorePaint.alpha = 120
+            canvas.drawRoundRect(
+                left, midY - coreH, right, midY + coreH,
+                coreRx, coreRx, neonCorePaint
+            )
         }
     }
 }
