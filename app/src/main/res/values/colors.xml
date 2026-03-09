@@ -14,6 +14,7 @@
     <color name="surface_card">#1AFFFFFF</color>     <!-- 흰색 10% 유리 효과 -->
     <color name="surface_elevated">#2EFFFFFF</color>  <!-- 흰색 18% 유리 효과 -->
     <color name="nav_bar_bg">#E80A0A1E</color>        <!-- 하단 네비게이션 전용: 91% 불투명 다크블루 -->
+    <color name="surface_button">#1A1A2E</color>       <!-- 버튼 전용 불투명 다크블루 -->
     <color name="accent_purple">#1ABFE0</color>       <!-- Play 버튼용 (더 어두운 cyan) -->
     <color name="accent_purple_light">#3CD3FE</color> <!-- 주요 하이라이트 cyan -->
     <color name="accent_purple_dark">#0E8FB5</color>

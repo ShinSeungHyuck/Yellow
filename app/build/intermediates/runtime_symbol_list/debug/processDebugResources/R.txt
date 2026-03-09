@@ -2175,6 +2175,7 @@ int color secondary_text_default_material_dark 0x7f0602ec
 int color secondary_text_default_material_light 0x7f0602ed
 int color secondary_text_disabled_material_dark 0x7f0602ee
 int color secondary_text_disabled_material_light 0x7f0602ef
+int color surface_button 0x7f060306
 int color surface_card 0x7f060301
 int color surface_elevated 0x7f060302
 int color switch_thumb_disabled_material_dark 0x7f0602f0
@@ -3228,6 +3229,7 @@ int drawable ic_nav_library 0x7f0800ec
 int drawable ic_nav_search 0x7f0800ed
 int drawable ic_nav_settings 0x7f0800ee
 int drawable ic_notifications_black_24dp 0x7f0800ef
+int drawable ic_search 0x7f080145
 int drawable ic_search_black_24 0x7f0800f0
 int drawable ic_star_filled 0x7f0800f1
 int drawable ic_star_outline 0x7f0800f2

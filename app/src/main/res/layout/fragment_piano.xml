@@ -208,7 +208,7 @@
                 android:layout_marginEnd="4dp"
                 android:text="Pause"
                 android:textColor="@color/text_primary"
-                app:backgroundTint="@color/surface_elevated"/>
+                app:backgroundTint="@color/surface_button"/>
 
             <Button
                 android:id="@+id/stop_song_button"
@@ -217,7 +217,7 @@
                 android:layout_weight="1"
                 android:text="Reset"
                 android:textColor="@color/text_primary"
-                app:backgroundTint="@color/surface_elevated"/>
+                app:backgroundTint="@color/surface_button"/>
         </LinearLayout>
 
     </LinearLayout>

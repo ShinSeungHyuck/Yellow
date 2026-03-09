@@ -11,6 +11,7 @@ color nav_bar_bg
 color purple_200
 color purple_500
 color purple_700
+color surface_button
 color surface_card
 color surface_elevated
 color teal_200
@@ -33,6 +34,7 @@ drawable ic_nav_library
 drawable ic_nav_search
 drawable ic_nav_settings
 drawable ic_notifications_black_24dp
+drawable ic_search
 drawable ic_star_filled
 drawable ic_star_outline
 drawable ic_volume_off
